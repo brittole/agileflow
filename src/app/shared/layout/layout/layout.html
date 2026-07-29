@@ -1,1 +1,11 @@
-<p>layout works!</p>
+<div class="layout">
+  <app-header class="layout__header" />
+
+  <div class="layout__body">
+    <app-sidebar class="layout__sidebar" />
+
+    <main class="layout__content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
