@@ -1,1 +1,83 @@
-<p>kanban works!</p>
+<section class="kanban">
+  @if (isLoading()) {
+    <p class="kanban__loading">Carregando projeto...</p>
+  } @else if (project(); as currentProject) {
+    <div class="kanban__header">
+      <div>
+        <h1>{{ currentProject.name }}</h1>
+        <p>{{ currentProject.description }}</p>
+      </div>
+      <button type="button" class="btn btn--primary" (click)="toggleForm()">
+        + Novo card
+      </button>
+    </div>
+
+    @if (isFormOpen()) {
+      <form class="card-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+        @if (formError()) {
+          <div class="card-form__error">{{ formError() }}</div>
+        }
+
+        <div class="form-field">
+          <label for="title">Título</label>
+          <input id="title" type="text" formControlName="title" placeholder="Título do card" />
+          @if (title.invalid && title.touched) {
+            <span class="form-field__error">O título é obrigatório.</span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="description">Descrição</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            rows="2"
+            placeholder="Descreva o card (opcional)"
+          ></textarea>
+        </div>
+
+        <div class="form-field">
+          <label for="storyPoints">Story Points</label>
+          <select id="storyPoints" formControlName="storyPoints">
+            <option [ngValue]="null" disabled>Selecione</option>
+            @for (points of storyPointsOptions; track points) {
+              <option [ngValue]="points">{{ points }}</option>
+            }
+          </select>
+          @if (storyPoints.invalid && storyPoints.touched) {
+            <span class="form-field__error">Selecione os story points.</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="isCreating()">
+          {{ isCreating() ? 'Criando...' : 'Criar card' }}
+        </button>
+      </form>
+    }
+
+    <div class="kanban-board">
+      @for (column of columns; track column.status) {
+        <div class="kanban-column">
+          <h2 class="kanban-column__title">{{ column.label }}</h2>
+
+          @for (card of cardsForStatus(column.status); track card.id) {
+            <article class="card-item">
+              <h3>{{ card.title }}</h3>
+              @if (card.description) {
+                <p>{{ card.description }}</p>
+              }
+              <div class="card-item__footer">
+                <span class="card-item__points">{{ card.storyPoints }} pts</span>
+              </div>
+            </article>
+          } @empty {
+            <p class="kanban-column__empty">Nenhum card por aqui.</p>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="kanban__empty">{{ errorMessage() }}</p>
+  }
+</section>
+

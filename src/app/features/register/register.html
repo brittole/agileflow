@@ -1,0 +1,96 @@
+<section class="register">
+  <div class="register-card">
+    <div class="register-card__header">
+      <h1>AgileFlow</h1>
+      <p>Crie sua conta para começar a gerenciar seus projetos.</p>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="register-card__error">{{ errorMessage() }}</div>
+    }
+
+    <form class="register-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="form-field">
+        <label for="nome">Nome</label>
+        <input
+          id="nome"
+          type="text"
+          formControlName="nome"
+          placeholder="Seu nome completo"
+          autocomplete="name"
+        />
+        @if (nome.invalid && nome.touched) {
+          <span class="form-field__error">
+            @if (nome.hasError('required')) {
+              O nome é obrigatório.
+            } @else if (nome.hasError('minlength')) {
+              O nome deve ter no mínimo 2 caracteres.
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="email">E-mail</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          placeholder="seuemail@exemplo.com"
+          autocomplete="email"
+        />
+        @if (email.invalid && email.touched) {
+          <span class="form-field__error">
+            @if (email.hasError('required')) {
+              O e-mail é obrigatório.
+            } @else if (email.hasError('email')) {
+              Informe um e-mail válido.
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="password">Senha</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="••••••••"
+          autocomplete="new-password"
+        />
+        @if (password.invalid && password.touched) {
+          <span class="form-field__error">
+            @if (password.hasError('required')) {
+              A senha é obrigatória.
+            } @else if (password.hasError('minlength')) {
+              A senha deve ter no mínimo 6 caracteres.
+            }
+          </span>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="confirmPassword">Confirmar senha</label>
+        <input
+          id="confirmPassword"
+          type="password"
+          formControlName="confirmPassword"
+          placeholder="••••••••"
+          autocomplete="new-password"
+        />
+        @if (confirmPassword.touched && form.hasError('passwordsMismatch')) {
+          <span class="form-field__error">As senhas não coincidem.</span>
+        }
+      </div>
+
+      <button type="submit" class="btn btn--primary" [disabled]="isLoading()">
+        {{ isLoading() ? 'Cadastrando...' : 'Cadastrar' }}
+      </button>
+    </form>
+
+    <p class="register-card__footer">
+      Já tem uma conta? <a routerLink="/login">Entrar</a>
+    </p>
+  </div>
+</section>
