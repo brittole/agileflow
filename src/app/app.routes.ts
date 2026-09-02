@@ -37,11 +37,6 @@ export const routes: Routes = [
           import('./features/kanban/kanban').then((m) => m.Kanban),
       },
       {
-        path: 'kanban',
-        loadComponent: () =>
-          import('./features/kanban/kanban').then((m) => m.Kanban),
-      },
-      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile').then((m) => m.Profile),

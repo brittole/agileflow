@@ -4,6 +4,15 @@
   gap: 24px;
 }
 
+.dashboard__error {
+  background: #fdeceb;
+  color: #b3261e;
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+
+
 .welcome-card {
   background: linear-gradient(135deg, var(--color-primary), #3d7bff);
   border-radius: var(--radius-lg);

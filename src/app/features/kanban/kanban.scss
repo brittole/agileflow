@@ -141,6 +141,11 @@
   border-radius: var(--radius-md);
   padding: 14px;
   box-shadow: var(--shadow-sm);
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
 
   h3 {
     margin: 0 0 6px;

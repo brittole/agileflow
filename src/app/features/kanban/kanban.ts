@@ -8,6 +8,7 @@ import { Card } from '../../models/card.model';
 import { Project } from '../../models/project.model';
 import { CardService } from '../../services/card.service';
 import { ProjectService } from '../../services/project.service';
+import { CardDetail } from '../card-detail/card-detail';
 
 interface IKanbanColumn {
   status: CardStatus;
@@ -22,7 +23,7 @@ const KANBAN_COLUMNS: IKanbanColumn[] = [
 
 @Component({
   selector: 'app-kanban',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, CardDetail],
   templateUrl: './kanban.html',
   styleUrl: './kanban.scss',
 })
@@ -32,10 +33,12 @@ export class Kanban implements OnInit, OnDestroy {
   private readonly cardService = inject(CardService);
   private readonly fb = inject(FormBuilder);
 
+  private routeSubscription?: Subscription;
   private projectSubscription?: Subscription;
   private cardsSubscription?: Subscription;
+  private draggedCardId: string | null = null;
 
-  private readonly projectId = this.route.snapshot.paramMap.get('projectId');
+  private projectId: string | null = null;
 
   readonly columns = KANBAN_COLUMNS;
   readonly storyPointsOptions = CARD_STORY_POINTS;
@@ -48,6 +51,8 @@ export class Kanban implements OnInit, OnDestroy {
   readonly isFormOpen = signal(false);
   readonly isCreating = signal(false);
   readonly formError = signal<string | null>(null);
+
+  readonly selectedCard = signal<Card | null>(null);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
@@ -81,13 +86,31 @@ export class Kanban implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    if (!this.projectId) {
+    // Angular reuses this component instance when navigating between two
+    // routes matching the same pattern (e.g. switching projects), so the
+    // projectId must be read reactively instead of once from the snapshot.
+    this.routeSubscription = this.route.paramMap.subscribe((params) => {
+      this.loadProject(params.get('projectId'));
+    });
+  }
+
+  private loadProject(projectId: string | null): void {
+    this.projectSubscription?.unsubscribe();
+    this.cardsSubscription?.unsubscribe();
+
+    this.projectId = projectId;
+    this.project.set(null);
+    this.cards.set([]);
+    this.errorMessage.set(null);
+    this.isLoading.set(true);
+
+    if (!projectId) {
       this.errorMessage.set('Projeto inválido.');
       this.isLoading.set(false);
       return;
     }
 
-    this.projectSubscription = this.projectService.getProjectById$(this.projectId).subscribe({
+    this.projectSubscription = this.projectService.getProjectById$(projectId).subscribe({
       next: (project) => {
         this.project.set(project);
         this.isLoading.set(false);
@@ -102,13 +125,14 @@ export class Kanban implements OnInit, OnDestroy {
       },
     });
 
-    this.cardsSubscription = this.cardService.getCardsByProject$(this.projectId).subscribe({
+    this.cardsSubscription = this.cardService.getCardsByProject$(projectId).subscribe({
       next: (cards) => this.cards.set(cards),
       error: () => this.errorMessage.set('Não foi possível carregar os cards.'),
     });
   }
 
   ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
     this.projectSubscription?.unsubscribe();
     this.cardsSubscription?.unsubscribe();
   }
@@ -120,6 +144,50 @@ export class Kanban implements OnInit, OnDestroy {
   toggleForm(): void {
     this.isFormOpen.update((open) => !open);
     this.formError.set(null);
+  }
+
+  openCard(card: Card): void {
+    this.selectedCard.set(card);
+  }
+
+  closeCardDetail(): void {
+    this.selectedCard.set(null);
+  }
+
+  onDragStart(event: DragEvent, card: Card): void {
+    this.draggedCardId = card.id;
+    event.dataTransfer?.setData('text/plain', card.id);
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+  }
+
+  async onDrop(event: DragEvent, status: CardStatus): Promise<void> {
+    event.preventDefault();
+
+    const cardId = this.draggedCardId ?? event.dataTransfer?.getData('text/plain') ?? null;
+    this.draggedCardId = null;
+
+    if (!cardId) {
+      return;
+    }
+
+    const card = this.cards().find((existing) => existing.id === cardId);
+
+    if (!card || card.status === status) {
+      return;
+    }
+
+    try {
+      await this.cardService.updateCardStatus(cardId, status);
+    } catch {
+      this.errorMessage.set('Não foi possível mover o card.');
+    }
   }
 
   async onSubmit(): Promise<void> {

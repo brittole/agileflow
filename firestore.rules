@@ -18,7 +18,8 @@ service cloud.firestore {
                     && resource.data.ownerId == request.auth.uid
                     && request.resource.data.ownerId == resource.data.ownerId;
 
-      allow delete: if false;
+      allow delete: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid;
     }
 
     match /cards/{cardId} {
@@ -26,15 +27,19 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.ownerId == request.auth.uid;
 
+      // Firestore rejects list queries whose rule can't be proven from the query's
+      // own filters (get() to the parent project doesn't qualify), so read/update/delete
+      // are based directly on createdBy, which every card query filters by.
       allow read: if request.auth != null
-                  && get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.ownerId == request.auth.uid;
+                  && resource.data.createdBy == request.auth.uid;
 
       allow update: if request.auth != null
-                    && get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.ownerId == request.auth.uid
+                    && resource.data.createdBy == request.auth.uid
                     && request.resource.data.projectId == resource.data.projectId
                     && request.resource.data.createdBy == resource.data.createdBy;
 
-      allow delete: if false;
+      allow delete: if request.auth != null
+                    && resource.data.createdBy == request.auth.uid;
     }
 
     match /{document=**} {

@@ -55,11 +55,81 @@
   } @else {
     <div class="projects-grid">
       @for (project of projects(); track project.id) {
-        <article class="project-card" [routerLink]="['/projects', project.id, 'kanban']">
-          <h2>{{ project.name }}</h2>
-          <p>{{ project.description }}</p>
+        <article class="project-card">
+          <div class="project-card__actions">
+            <button
+              type="button"
+              class="icon-btn"
+              title="Editar projeto"
+              (click)="openEdit(project)"
+            >
+              ✏️
+            </button>
+            <button
+              type="button"
+              class="icon-btn icon-btn--danger"
+              title="Excluir projeto"
+              [disabled]="deletingId() === project.id"
+              (click)="onDelete(project)"
+            >
+              🗑️
+            </button>
+          </div>
+          <a class="project-card__link" [routerLink]="['/projects', project.id, 'kanban']">
+            <h2>{{ project.name }}</h2>
+            <p>{{ project.description }}</p>
+          </a>
         </article>
       }
     </div>
   }
 </section>
+
+@if (editingProject(); as project) {
+  <div class="modal-backdrop" (click)="closeEdit()">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <div class="modal__header">
+        <h2>Editar projeto</h2>
+        <button type="button" class="modal__close" (click)="closeEdit()" aria-label="Fechar">×</button>
+      </div>
+
+      @if (editError()) {
+        <div class="modal__error">{{ editError() }}</div>
+      }
+
+      <form class="project-form" [formGroup]="editForm" (ngSubmit)="onEditSubmit()">
+        <div class="form-field">
+          <label for="edit-name">Nome</label>
+          <input id="edit-name" type="text" formControlName="name" placeholder="Nome do projeto" />
+          @if (editName.invalid && editName.touched) {
+            <span class="form-field__error">
+              @if (editName.hasError('required')) {
+                O nome é obrigatório.
+              } @else if (editName.hasError('minlength')) {
+                O nome deve ter no mínimo 2 caracteres.
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-field">
+          <label for="edit-description">Descrição</label>
+          <textarea
+            id="edit-description"
+            formControlName="description"
+            rows="3"
+            placeholder="Descreva o projeto"
+          ></textarea>
+          @if (editDescription.invalid && editDescription.touched) {
+            <span class="form-field__error">A descrição é obrigatória.</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="isSaving()">
+          {{ isSaving() ? 'Salvando...' : 'Salvar alterações' }}
+        </button>
+      </form>
+    </div>
+  </div>
+}
+

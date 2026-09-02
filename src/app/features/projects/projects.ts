@@ -28,12 +28,30 @@ export class Projects implements OnInit, OnDestroy {
     description: ['', [Validators.required]],
   });
 
+  readonly editingProject = signal<Project | null>(null);
+  readonly isSaving = signal(false);
+  readonly editError = signal<string | null>(null);
+  readonly deletingId = signal<string | null>(null);
+
+  readonly editForm = this.fb.nonNullable.group({
+    name: ['', [Validators.required, Validators.minLength(2)]],
+    description: ['', [Validators.required]],
+  });
+
   get name() {
     return this.form.controls.name;
   }
 
   get description() {
     return this.form.controls.description;
+  }
+
+  get editName() {
+    return this.editForm.controls.name;
+  }
+
+  get editDescription() {
+    return this.editForm.controls.description;
   }
 
   ngOnInit(): void {
@@ -74,6 +92,62 @@ export class Projects implements OnInit, OnDestroy {
       this.errorMessage.set('Não foi possível criar o projeto.');
     } finally {
       this.isCreating.set(false);
+    }
+  }
+
+  openEdit(project: Project): void {
+    this.editError.set(null);
+    this.editForm.setValue({
+      name: project.name,
+      description: project.description,
+    });
+    this.editingProject.set(project);
+  }
+
+  closeEdit(): void {
+    this.editingProject.set(null);
+  }
+
+  async onEditSubmit(): Promise<void> {
+    const project = this.editingProject();
+
+    if (!project || this.editForm.invalid) {
+      this.editForm.markAllAsTouched();
+      return;
+    }
+
+    this.editError.set(null);
+    this.isSaving.set(true);
+
+    try {
+      await this.projectService.updateProject(project.id, this.editForm.getRawValue());
+      this.editingProject.set(null);
+    } catch {
+      this.editError.set('Não foi possível salvar as alterações.');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  async onDelete(project: Project): Promise<void> {
+    const confirmed = confirm(
+      `Tem certeza que deseja excluir o projeto "${project.name}"? Todos os cards deste projeto também serão excluídos.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.deletingId.set(project.id);
+    this.errorMessage.set(null);
+
+    try {
+      await this.projectService.deleteProject(project.id);
+    } catch (error) {
+      console.error('Falha ao excluir projeto:', error);
+      this.errorMessage.set('Não foi possível excluir o projeto.');
+    } finally {
+      this.deletingId.set(null);
     }
   }
 }

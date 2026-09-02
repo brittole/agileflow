@@ -1,1 +1,59 @@
-<p>card-detail works!</p>
+<div class="modal-backdrop" (click)="close()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal__header">
+      <h2>Editar card</h2>
+      <button type="button" class="modal__close" (click)="close()" aria-label="Fechar">×</button>
+    </div>
+
+    @if (errorMessage()) {
+      <div class="modal__error">{{ errorMessage() }}</div>
+    }
+
+    <form class="card-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="form-field">
+        <label for="detail-title">Título</label>
+        <input id="detail-title" type="text" formControlName="title" placeholder="Título do card" />
+        @if (title.invalid && title.touched) {
+          <span class="form-field__error">O título é obrigatório.</span>
+        }
+      </div>
+
+      <div class="form-field">
+        <label for="detail-description">Descrição</label>
+        <textarea
+          id="detail-description"
+          formControlName="description"
+          rows="3"
+          placeholder="Descreva o card (opcional)"
+        ></textarea>
+      </div>
+
+      <div class="form-field">
+        <label for="detail-storyPoints">Story Points</label>
+        <select id="detail-storyPoints" formControlName="storyPoints">
+          <option [ngValue]="null" disabled>Selecione</option>
+          @for (points of storyPointsOptions; track points) {
+            <option [ngValue]="points">{{ points }}</option>
+          }
+        </select>
+        @if (storyPoints.invalid && storyPoints.touched) {
+          <span class="form-field__error">Selecione os story points.</span>
+        }
+      </div>
+
+      <div class="modal__actions">
+        <button
+          type="button"
+          class="btn btn--danger"
+          (click)="onDelete()"
+          [disabled]="isDeleting() || isSaving()"
+        >
+          {{ isDeleting() ? 'Excluindo...' : 'Excluir card' }}
+        </button>
+        <button type="submit" class="btn btn--primary" [disabled]="isSaving() || isDeleting()">
+          {{ isSaving() ? 'Salvando...' : 'Salvar alterações' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

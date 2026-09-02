@@ -12,6 +12,10 @@
       </button>
     </div>
 
+    @if (errorMessage()) {
+      <div class="card-form__error">{{ errorMessage() }}</div>
+    }
+
     @if (isFormOpen()) {
       <form class="card-form" [formGroup]="form" (ngSubmit)="onSubmit()">
         @if (formError()) {
@@ -57,11 +61,20 @@
 
     <div class="kanban-board">
       @for (column of columns; track column.status) {
-        <div class="kanban-column">
+        <div
+          class="kanban-column"
+          (dragover)="onDragOver($event)"
+          (drop)="onDrop($event, column.status)"
+        >
           <h2 class="kanban-column__title">{{ column.label }}</h2>
 
           @for (card of cardsForStatus(column.status); track card.id) {
-            <article class="card-item">
+            <article
+              class="card-item"
+              draggable="true"
+              (dragstart)="onDragStart($event, card)"
+              (click)="openCard(card)"
+            >
               <h3>{{ card.title }}</h3>
               @if (card.description) {
                 <p>{{ card.description }}</p>
@@ -80,4 +93,8 @@
     <p class="kanban__empty">{{ errorMessage() }}</p>
   }
 </section>
+
+@if (selectedCard(); as card) {
+  <app-card-detail [card]="card" (closed)="closeCardDetail()" />
+}
 
