@@ -1,1 +1,20 @@
-<p>profile works!</p>
+<section class="profile">
+  <h1>Perfil</h1>
+
+  @if (isLoading()) {
+    <p class="profile__loading">Carregando...</p>
+  } @else if (profile(); as p) {
+    <div class="profile__card">
+      <div class="profile__field">
+        <span class="profile__label">Nome</span>
+        <span class="profile__value">{{ p.nome }}</span>
+      </div>
+      <div class="profile__field">
+        <span class="profile__label">E-mail</span>
+        <span class="profile__value">{{ p.email }}</span>
+      </div>
+    </div>
+  } @else {
+    <p class="profile__empty">Perfil não encontrado.</p>
+  }
+</section>

@@ -1,9 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -12,10 +11,13 @@ import {
   updateDoc,
   where,
   writeBatch,
+  WriteBatch,
 } from 'firebase/firestore';
-import { Observable } from 'rxjs';
+import { Observable, of, switchMap } from 'rxjs';
 
+import { environment } from '../../environments/environment';
 import { db } from '../core/firebase';
+import { CardEventType, ICardEvent } from '../interfaces/card-event.interface';
 import { CardStatus, CardStoryPoints, ICreateCard } from '../interfaces/card.interface';
 import { Card } from '../models/card.model';
 import { AuthService } from './auth.service';
@@ -26,23 +28,25 @@ import { AuthService } from './auth.service';
 export class CardService {
   private readonly authService = inject(AuthService);
   private readonly collectionName = 'cards';
+  private readonly eventsCollectionName = 'cardEvents';
+  // Com eventos, as regras fazem get()/existsAfter() por cartão e o limite é 20 acessos por batch;
+  // sem eventos, vale apenas o limite de 500 operações.
+  private get deleteChunkSize(): number {
+    return environment.cardEventsEnabled ? 8 : 200;
+  }
 
   getCardsByProject$(projectId: string): Observable<Card[]> {
+    return this.authService.getUidWhenReady$().pipe(
+      switchMap((uid) => (uid ? this.watchCardsByProject$(projectId, uid) : of([] as Card[]))),
+    );
+  }
+
+  private watchCardsByProject$(projectId: string, uid: string): Observable<Card[]> {
     return new Observable<Card[]>((subscriber) => {
-      const uid = this.authService.getCurrentUser()?.uid;
-
-      if (!uid) {
-        subscriber.next([]);
-        subscriber.complete();
-        return;
-      }
-
-      // createdBy must be part of the query filter: Firestore rejects list queries
-      // whose security rule can't be proven from the query's own filters.
+      // A regra de leitura exige que o usuário seja membro do projeto.
       const cardsQuery = query(
         collection(db, this.collectionName),
         where('projectId', '==', projectId),
-        where('createdBy', '==', uid),
         orderBy('createdAt', 'asc'),
       );
 
@@ -63,7 +67,12 @@ export class CardService {
       throw new Error('Usuário não autenticado.');
     }
 
-    await addDoc(collection(db, this.collectionName), {
+    await this.requireProjectOwner(projectId);
+
+    const batch = writeBatch(db);
+    const cardRef = doc(collection(db, this.collectionName));
+
+    batch.set(cardRef, {
       projectId,
       title: data.title,
       description: data.description,
@@ -73,27 +82,116 @@ export class CardService {
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
+
+    this.addEventToBatch(batch, uid, {
+      cardId: cardRef.id,
+      projectId,
+      type: 'created',
+      fromStatus: null,
+      toStatus: 'todo',
+      storyPoints: data.storyPoints,
+    });
+
+    await batch.commit();
   }
 
   async updateCardStatus(cardId: string, status: CardStatus): Promise<void> {
-    await updateDoc(doc(db, this.collectionName, cardId), {
+    const uid = this.authService.getCurrentUser()?.uid;
+
+    if (!uid) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const cardRef = doc(db, this.collectionName, cardId);
+    const current = await getDoc(cardRef);
+
+    if (!current.exists()) {
+      throw new Error('Card não encontrado.');
+    }
+
+    const { status: fromStatus, projectId, storyPoints } = current.data();
+
+    if (fromStatus !== status) {
+      await this.requireCanMoveTo(projectId, status);
+    }
+
+    const batch = writeBatch(db);
+
+    const changed = fromStatus !== status;
+    const eventId = changed
+      ? this.addEventToBatch(batch, uid, {
+          cardId,
+          projectId,
+          type: 'moved',
+          fromStatus,
+          toStatus: status,
+          storyPoints: storyPoints ?? null,
+        })
+      : null;
+
+    // completedAt só muda quando o status muda, preservando a data de conclusão existente.
+    // lastEventId aponta para o evento do mesmo batch; as regras exigem esse vínculo a cada mudança de status.
+    batch.update(cardRef, {
       status,
+      ...(changed ? { completedAt: status === 'done' ? serverTimestamp() : null } : {}),
+      ...(eventId ? { lastEventId: eventId } : {}),
       updatedAt: serverTimestamp()
     });
+
+    await batch.commit();
   }
 
   async updateCard(
     cardId: string,
     data: { title: string; description: string; storyPoints: CardStoryPoints },
   ): Promise<void> {
-    await updateDoc(doc(db, this.collectionName, cardId), {
+    const cardRef = doc(db, this.collectionName, cardId);
+    const current = await getDoc(cardRef);
+
+    if (!current.exists()) {
+      throw new Error('Card não encontrado.');
+    }
+
+    await this.requireProjectOwner(current.data()['projectId']);
+
+    await updateDoc(cardRef, {
       ...data,
       updatedAt: serverTimestamp()
     });
   }
 
   async deleteCard(cardId: string): Promise<void> {
-    await deleteDoc(doc(db, this.collectionName, cardId));
+    const uid = this.authService.getCurrentUser()?.uid;
+
+    if (!uid) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const cardRef = doc(db, this.collectionName, cardId);
+    const current = await getDoc(cardRef);
+
+    if (!current.exists()) {
+      return;
+    }
+
+    const { status, projectId, storyPoints } = current.data();
+
+    await this.requireProjectOwner(projectId);
+
+    const batch = writeBatch(db);
+
+    batch.delete(cardRef);
+
+    this.addEventToBatch(batch, uid, {
+      cardId,
+      projectId,
+      type: 'deleted',
+      fromStatus: status ?? null,
+      toStatus: null,
+      storyPoints: storyPoints ?? null,
+    });
+
+    await batch.commit();
   }
 
   // Used when a project is deleted, so no orphan cards remain in Firestore.
@@ -104,31 +202,113 @@ export class CardService {
       throw new Error('Usuário não autenticado.');
     }
 
-    // createdBy must match the delete/read rule's filter, or Firestore rejects this list query outright.
     const cardsQuery = query(
       collection(db, this.collectionName),
       where('projectId', '==', projectId),
-      where('createdBy', '==', uid),
     );
 
     const snapshot = await getDocs(cardsQuery);
-    const batch = writeBatch(db);
 
-    snapshot.docs.forEach((cardDoc) => batch.delete(cardDoc.ref));
+    for (let i = 0; i < snapshot.docs.length; i += this.deleteChunkSize) {
+      const batch = writeBatch(db);
 
-    await batch.commit();
+      snapshot.docs.slice(i, i + this.deleteChunkSize).forEach((cardDoc) => {
+        const { status, storyPoints } = cardDoc.data();
+
+        batch.delete(cardDoc.ref);
+
+        this.addEventToBatch(batch, uid, {
+          cardId: cardDoc.id,
+          projectId,
+          type: 'deleted',
+          fromStatus: status ?? null,
+          toStatus: null,
+          storyPoints: storyPoints ?? null,
+        });
+      });
+
+      await batch.commit();
+    }
+  }
+
+  // Verifica se o usuário é dono do projeto. Lança erro se não for.
+  private async requireProjectOwner(projectId: string): Promise<void> {
+    const uid = this.authService.getCurrentUser()?.uid;
+
+    if (!uid) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const projectDoc = await getDoc(doc(db, 'projects', projectId));
+
+    if (!projectDoc.exists()) {
+      throw new Error('Projeto não encontrado.');
+    }
+
+    if (projectDoc.data()['ownerId'] !== uid) {
+      throw new Error('Apenas o administrador do projeto pode realizar esta ação.');
+    }
+  }
+
+  // Verifica se o usuário pode mover um cartão para o status desejado.
+  // Participantes não podem mover para "done".
+  private async requireCanMoveTo(projectId: string, toStatus: CardStatus): Promise<void> {
+    const uid = this.authService.getCurrentUser()?.uid;
+
+    if (!uid) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const projectDoc = await getDoc(doc(db, 'projects', projectId));
+
+    if (!projectDoc.exists()) {
+      throw new Error('Projeto não encontrado.');
+    }
+
+    const project = projectDoc.data();
+    const isOwner = project['ownerId'] === uid;
+    const isMember = (project['memberIds'] ?? []).includes(uid);
+
+    if (!isOwner && !isMember) {
+      throw new Error('Você não tem acesso a este projeto.');
+    }
+
+    if (!isOwner && toStatus === 'done') {
+      throw new Error('Apenas o administrador pode finalizar cartões.');
+    }
+  }
+
+  // Eventos são preservados mesmo após a exclusão do cartão ou do projeto.
+  private addEventToBatch(
+    batch: WriteBatch,
+    uid: string,
+    event: Pick<ICardEvent, 'cardId' | 'projectId' | 'fromStatus' | 'toStatus' | 'storyPoints'> & {
+      type: CardEventType;
+    },
+  ): string | null {
+    if (!environment.cardEventsEnabled) {
+      return null;
+    }
+
+    const eventRef = doc(collection(db, this.eventsCollectionName));
+
+    batch.set(eventRef, {
+      ...event,
+      createdBy: uid,
+      createdAt: serverTimestamp()
+    });
+
+    return eventRef.id;
   }
 
   getAllCardsForCurrentUser$(): Observable<Card[]> {
+    return this.authService.getUidWhenReady$().pipe(
+      switchMap((uid) => (uid ? this.watchAllCards$(uid) : of([] as Card[]))),
+    );
+  }
+
+  private watchAllCards$(uid: string): Observable<Card[]> {
     return new Observable<Card[]>((subscriber) => {
-      const uid = this.authService.getCurrentUser()?.uid;
-
-      if (!uid) {
-        subscriber.next([]);
-        subscriber.complete();
-        return;
-      }
-
       const cardsQuery = query(
         collection(db, this.collectionName),
         where('createdBy', '==', uid),

@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-export type CardStatus = 'todo' | 'inProgress' | 'done';
+export type CardStatus = 'todo' | 'inProgress' | 'review' | 'done';
 
 export const CARD_STORY_POINTS = [1, 2, 3, 5, 8] as const;
 export type CardStoryPoints = (typeof CARD_STORY_POINTS)[number];
@@ -15,6 +15,10 @@ export interface ICard {
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
   createdBy: string;
+  // Ausente em cartões antigos; definido ao mover para "done" e limpo ao reabrir.
+  completedAt?: Timestamp | null;
+  // Id do evento "moved" gravado no mesmo batch da última mudança de status; ausente em cartões antigos.
+  lastEventId?: string | null;
 }
 
 export interface ICreateCard {

@@ -9,7 +9,7 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { Observable } from 'rxjs';
+import { Observable, from, map } from 'rxjs';
 
 import { auth } from '../core/firebase';
 import { IAuthError, ILoginCredentials, IRegisterCredentials } from '../interfaces/auth.interface';
@@ -74,8 +74,24 @@ export class AuthService {
     }
   }
 
+  // Emite o uid (ou null) só depois que o Firebase terminou de restaurar a sessão;
+  // auth.currentUser é null logo após um F5, mesmo com o usuário logado.
+  getUidWhenReady$(): Observable<string | null> {
+    return from(auth.authStateReady()).pipe(map(() => auth.currentUser?.uid ?? null));
+  }
+
   getCurrentUser(): IUser | null {
     return this.mapUser(auth.currentUser);
+  }
+
+  async getIdToken(): Promise<string> {
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    return user.getIdToken();
   }
 
   private mapUser(user: User | null): IUser | null {

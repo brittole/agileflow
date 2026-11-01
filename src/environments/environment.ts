@@ -1,5 +1,10 @@
 export const environment = {
   production: false,
+  useEmulators: false,
+  aiWorkerUrl: 'http://localhost:8787',
+
+  // Só ligar depois de publicar regras do Firestore que permitam criar em "cardEvents".
+  cardEventsEnabled: false,
 
   firebase: {
     apiKey: "AIzaSyDSBcFqJQ9ndhw8C07a-ho-8ncT2Xn4lr0",

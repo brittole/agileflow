@@ -39,6 +39,10 @@ Cloud Firestore
 
 Coleções:
 
-- users
-- cards
-- comments
+- users (perfil criado no cadastro por e-mail/senha)
+- projects (ownerId)
+- cards (projectId, createdBy)
+
+Planejada: cardEvents (histórico de movimentação dos cartões).
+
+A coleção `comments` não existe; `ai.service.ts` ainda está vazio (a integração com o Gemini não foi implementada).

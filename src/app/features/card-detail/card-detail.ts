@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { CARD_STORY_POINTS, CardStoryPoints } from '../../interfaces/card.interface';
 import { Card } from '../../models/card.model';
+import { AuthService } from '../../services/auth.service';
 import { CardService } from '../../services/card.service';
+import { ProjectService } from '../../services/project.service';
 
 @Component({
   selector: 'app-card-detail',
@@ -13,6 +15,8 @@ import { CardService } from '../../services/card.service';
 })
 export class CardDetail implements OnInit {
   private readonly cardService = inject(CardService);
+  private readonly projectService = inject(ProjectService);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   readonly card = input.required<Card>();
@@ -22,6 +26,8 @@ export class CardDetail implements OnInit {
   readonly isSaving = signal(false);
   readonly isDeleting = signal(false);
   readonly errorMessage = signal<string | null>(null);
+
+  readonly isOwner = signal(false);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
@@ -49,6 +55,19 @@ export class CardDetail implements OnInit {
       description: current.description,
       storyPoints: current.storyPoints,
     });
+
+    this.checkOwnership(current.projectId);
+  }
+
+  private async checkOwnership(projectId: string): Promise<void> {
+    const uid = this.authService.getCurrentUser()?.uid;
+
+    if (!uid) {
+      return;
+    }
+
+    const projectDoc = await this.projectService.getProjectById(projectId);
+    this.isOwner.set(projectDoc?.ownerId === uid);
   }
 
   close(): void {
@@ -73,8 +92,10 @@ export class CardDetail implements OnInit {
         storyPoints: storyPoints as CardStoryPoints,
       });
       this.closed.emit();
-    } catch {
-      this.errorMessage.set('Não foi possível salvar as alterações.');
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Não foi possível salvar as alterações.',
+      );
     } finally {
       this.isSaving.set(false);
     }
@@ -95,8 +116,10 @@ export class CardDetail implements OnInit {
     try {
       await this.cardService.deleteCard(this.card().id);
       this.closed.emit();
-    } catch {
-      this.errorMessage.set('Não foi possível excluir o card.');
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Não foi possível excluir o card.',
+      );
       this.isDeleting.set(false);
     }
   }

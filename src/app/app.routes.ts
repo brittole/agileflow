@@ -1,4 +1,6 @@
 import { Routes } from '@angular/router';
+
+import { authGuard } from './core/auth.guard';
 import { Layout } from './shared/layout/layout/layout';
 
 export const routes: Routes = [
@@ -20,6 +22,7 @@ export const routes: Routes = [
   {
     path: '',
     component: Layout,
+    canActivate: [authGuard],
     children: [
       {
         path: 'dashboard',
@@ -37,10 +40,26 @@ export const routes: Routes = [
           import('./features/kanban/kanban').then((m) => m.Kanban),
       },
       {
+        path: 'projects/:projectId/performance',
+        loadComponent: () =>
+          import('./features/project-performance/project-performance').then(
+            (m) => m.ProjectPerformance,
+          ),
+      },
+      {
+        path: 'projects/:projectId/team',
+        loadComponent: () =>
+          import('./features/project-team/project-team').then((m) => m.ProjectTeam),
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile').then((m) => m.Profile),
       },
     ],
+  },
+  {
+    path: '**',
+    redirectTo: 'dashboard',
   },
 ];

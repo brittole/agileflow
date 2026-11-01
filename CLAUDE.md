@@ -50,14 +50,16 @@ O sistema possui:
 Cada Card possui:
 
 - id
-- titulo
-- descricao
-- status
-- prioridade
-- storyPoint
-- responsavel
-- criadoEm
-- atualizadoEm
+- projectId
+- title
+- description
+- status (`todo`, `inProgress` ou `done`)
+- storyPoints (1, 2, 3, 5 ou 8)
+- createdBy
+- createdAt
+- updatedAt
+
+Não existem prioridade, responsável, comentários nem histórico de movimentação (planejado: coleção `cardEvents`).
 
 ## Antes de gerar código
 

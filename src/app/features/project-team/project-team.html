@@ -1,0 +1,71 @@
+<section class="team">
+  <header class="team__header">
+    <a class="team__back" [routerLink]="['/projects', project()?.id, 'kanban']">
+      ← Voltar ao Kanban
+    </a>
+    <h1>Gerenciar equipe</h1>
+    @if (project(); as p) {
+      <p>{{ p.name }}</p>
+    }
+  </header>
+
+  @if (errorMessage()) {
+    <div class="team__error">{{ errorMessage() }}</div>
+  }
+
+  @if (successMessage()) {
+    <div class="team__success">{{ successMessage() }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="team__loading">Carregando...</p>
+  } @else if (project(); as p) {
+    <section class="panel">
+      <h2>Adicionar participante</h2>
+      <p class="panel__hint">
+        Informe o e-mail de alguém que já possui cadastro no AgileFlow.
+      </p>
+
+      <form class="team__form" [formGroup]="form" (ngSubmit)="onAddMember()">
+        <div class="form-field">
+          <label for="email">E-mail</label>
+          <input id="email" type="email" formControlName="email" placeholder="email@exemplo.com" />
+          @if (email.invalid && email.touched) {
+            <span class="form-field__error">Informe um e-mail válido.</span>
+          }
+        </div>
+
+        <button type="submit" class="btn btn--primary" [disabled]="isAdding()">
+          {{ isAdding() ? 'Adicionando...' : 'Adicionar' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="panel">
+      <h2>Participantes ({{ members().length }})</h2>
+
+      @if (members().length === 0) {
+        <p class="panel__empty">Nenhum participante ainda.</p>
+      } @else {
+        <ul class="team__list">
+          @for (member of members(); track member.uid) {
+            <li class="team__member">
+              <div>
+                <strong>{{ member.nome }}</strong>
+                <span>{{ member.email }}</span>
+              </div>
+              <button
+                type="button"
+                class="btn btn--danger btn--sm"
+                [disabled]="removingUid() === member.uid"
+                (click)="onRemoveMember(member)"
+              >
+                {{ removingUid() === member.uid ? 'Removendo...' : 'Remover' }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</section>

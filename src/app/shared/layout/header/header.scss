@@ -1,6 +1,7 @@
 .header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: 64px;
   padding: 0 24px;
   background: var(--color-surface);
@@ -12,5 +13,20 @@
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-primary);
+  }
+
+  &__logout {
+    background: none;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-bg);
+      color: var(--color-text);
+    }
   }
 }

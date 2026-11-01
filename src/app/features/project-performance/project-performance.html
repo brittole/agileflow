@@ -1,0 +1,181 @@
+<section class="performance">
+  <header class="performance__header">
+    <div>
+      <a class="performance__back" [routerLink]="['/projects', projectId(), 'kanban']">
+        ← Voltar ao Kanban
+      </a>
+      <h1>Desempenho do Projeto</h1>
+      @if (project(); as currentProject) {
+        <p>{{ currentProject.name }}</p>
+      }
+    </div>
+  </header>
+
+  @if (errorMessage()) {
+    <div class="performance__error">{{ errorMessage() }}</div>
+  }
+
+  @if (isLoading()) {
+    <p class="performance__loading">Carregando métricas...</p>
+  } @else if (metrics(); as m) {
+    <div class="stats-grid">
+      <article class="stat-card">
+        <div class="stat-card__icon stat-card__icon--total">🗂️</div>
+        <div class="stat-card__info">
+          <span class="stat-card__value">{{ m.totalCards }}</span>
+          <span class="stat-card__label">Total de cartões</span>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card__icon stat-card__icon--done">✅</div>
+        <div class="stat-card__info">
+          <span class="stat-card__value">{{ m.completedCards }}</span>
+          <span class="stat-card__label">Concluídos</span>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card__icon stat-card__icon--wip">⏳</div>
+        <div class="stat-card__info">
+          <span class="stat-card__value">{{ m.wip }}</span>
+          <span class="stat-card__label">Em andamento (WIP)</span>
+        </div>
+      </article>
+
+      <article class="stat-card">
+        <div class="stat-card__icon stat-card__icon--points">🎯</div>
+        <div class="stat-card__info">
+          <span class="stat-card__value">{{ m.completedStoryPoints }}</span>
+          <span class="stat-card__label">Story Points concluídos</span>
+        </div>
+      </article>
+    </div>
+
+    <div class="performance__panels">
+      <section class="panel">
+        <h2>Distribuição por status</h2>
+
+        @if (m.totalCards === 0) {
+          <p class="panel__empty">Nenhum cartão neste projeto ainda.</p>
+        } @else {
+          <div class="distribution">
+            @for (item of statusDistribution(); track item.label) {
+              <div class="distribution__row">
+                <span class="distribution__label">{{ item.label }}</span>
+                <div class="distribution__bar-track">
+                  <div
+                    class="distribution__bar"
+                    [style.width.%]="item.percentage"
+                    [style.background]="item.color"
+                  ></div>
+                </div>
+                <span class="distribution__count">{{ item.count }} ({{ item.percentage }}%)</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      <section class="panel">
+        <h2>Desempenho e produtividade</h2>
+
+        <div class="panel__metrics">
+          <div class="panel__metric">
+            <span class="panel__metric-value">{{ m.throughput }}</span>
+            <span class="panel__metric-label">
+              Cartões concluídos nos últimos {{ m.periodDays }} dias
+            </span>
+          </div>
+
+          <div class="panel__metric">
+            @if (hasCycleTime()) {
+              <span class="panel__metric-value">{{ formatCycleTime(m.averageCycleTimeDays!) }}</span>
+              <span class="panel__metric-label">
+                Cycle time médio ({{ m.cycleTimeSampleSize }}
+                {{ m.cycleTimeSampleSize === 1 ? 'cartão' : 'cartões' }})
+              </span>
+            } @else {
+              <span class="panel__metric-value">—</span>
+              <span class="panel__metric-label">
+                Cycle time indisponível: ainda não há cartões com início e conclusão registrados.
+              </span>
+            }
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel panel--ai">
+      <div class="panel--ai__header">
+        <h2>AgileFlow AI</h2>
+      </div>
+      <p>
+        O assistente de IA analisa as métricas reais deste projeto e aponta pontos fortes,
+        gargalos e sugestões práticas de melhoria.
+      </p>
+
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="isAnalyzing()"
+        (click)="analyzeProject()"
+      >
+        {{ isAnalyzing() ? 'Analisando...' : 'Analisar projeto' }}
+      </button>
+
+      @if (aiError()) {
+        <div class="panel--ai__error">{{ aiError() }}</div>
+      }
+
+      @if (diagnosis(); as d) {
+        <div class="panel--ai__result">
+          <h3>Resumo</h3>
+          <p>{{ d.summary }}</p>
+
+          @if (d.strengths.length) {
+            <h3>Pontos fortes</h3>
+            <ul>
+              @for (item of d.strengths; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          }
+
+          @if (d.concerns.length) {
+            <h3>Pontos de atenção</h3>
+            <ul>
+              @for (item of d.concerns; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          }
+
+          @if (d.bottlenecks.length) {
+            <h3>Gargalos</h3>
+            <ul>
+              @for (item of d.bottlenecks; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          }
+
+          @if (d.suggestions.length) {
+            <h3>Sugestões</h3>
+            <ul>
+              @for (item of d.suggestions; track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          }
+        </div>
+      } @else if (!isAnalyzing() && !aiError()) {
+        <div class="panel--ai__result">
+          <p class="panel--ai__placeholder">
+            Clique em "Analisar projeto" para gerar o diagnóstico.
+          </p>
+        </div>
+      }
+    </section>
+  }
+</section>

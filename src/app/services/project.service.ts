@@ -1,9 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import {
   addDoc,
+  arrayRemove,
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
@@ -11,7 +14,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { Observable } from 'rxjs';
+import { Observable, of, switchMap } from 'rxjs';
 
 import { db } from '../core/firebase';
 import { ICreateProject } from '../interfaces/project.interface';
@@ -28,15 +31,13 @@ export class ProjectService {
   private readonly collectionName = 'projects';
 
   getProjects$(): Observable<Project[]> {
+    return this.authService.getUidWhenReady$().pipe(
+      switchMap((uid) => (uid ? this.watchProjects$(uid) : of([] as Project[]))),
+    );
+  }
+
+  private watchProjects$(uid: string): Observable<Project[]> {
     return new Observable<Project[]>((subscriber) => {
-      const uid = this.authService.getCurrentUser()?.uid;
-
-      if (!uid) {
-        subscriber.next([]);
-        subscriber.complete();
-        return;
-      }
-
       const projectsQuery = query(
         collection(db, this.collectionName),
         where('ownerId', '==', uid),
@@ -78,6 +79,7 @@ export class ProjectService {
       name,
       description,
       ownerId: uid,
+      memberIds: [],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -97,5 +99,30 @@ export class ProjectService {
   async deleteProject(projectId: string): Promise<void> {
     await this.cardService.deleteCardsByProject(projectId);
     await deleteDoc(doc(db, this.collectionName, projectId));
+  }
+
+  async getProjectById(projectId: string): Promise<Project | null> {
+    const snapshot = await getDoc(doc(db, this.collectionName, projectId));
+    return snapshot.exists() ? Project.fromSnapshot(snapshot) : null;
+  }
+
+  // Busca um usuário pelo e-mail na coleção userEmails. Retorna null se não existir.
+  async findUserByEmail(email: string): Promise<{ uid: string } | null> {
+    const snapshot = await getDoc(doc(db, 'userEmails', email.toLowerCase().trim()));
+    return snapshot.exists() ? { uid: snapshot.data()['uid'] } : null;
+  }
+
+  async addMember(projectId: string, memberUid: string): Promise<void> {
+    await updateDoc(doc(db, this.collectionName, projectId), {
+      memberIds: arrayUnion(memberUid),
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  async removeMember(projectId: string, memberUid: string): Promise<void> {
+    await updateDoc(doc(db, this.collectionName, projectId), {
+      memberIds: arrayRemove(memberUid),
+      updatedAt: serverTimestamp(),
+    });
   }
 }

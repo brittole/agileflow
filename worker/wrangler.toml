@@ -1,0 +1,7 @@
+name = "agileflow-ai"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "agileflow-2ba9c"
+GEMINI_MODEL = "gemini-3.5-flash"

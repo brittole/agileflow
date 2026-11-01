@@ -3,43 +3,206 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Perfil do usuário: só o próprio usuário lê e escreve.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Busca segura por e-mail: qualquer autenticado pode verificar se um e-mail existe,
+    // mas só o próprio usuário cria o registro no cadastro. Sem list.
+    match /userEmails/{email} {
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasOnly(['uid'])
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    function isProjectMember(projectData) {
+      return request.auth != null
+             && (projectData.ownerId == request.auth.uid
+                 || request.auth.uid in projectData.memberIds);
+    }
+
+    function isProjectOwner(projectData) {
+      return request.auth != null && projectData.ownerId == request.auth.uid;
+    }
+
     match /projects/{projectId} {
       allow create: if request.auth != null
-                    && request.resource.data.ownerId == request.auth.uid;
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.memberIds == [];
 
-      allow read: if request.auth != null
-                  && resource.data.ownerId == request.auth.uid;
+      allow read: if isProjectMember(resource.data);
 
-      allow update: if request.auth != null
-                    && resource.data.ownerId == request.auth.uid
-                    && request.resource.data.ownerId == resource.data.ownerId;
+      // Só o dono edita. Pode mudar name, description e memberIds; ownerId é imutável.
+      allow update: if isProjectOwner(resource.data)
+                    && request.resource.data.ownerId == resource.data.ownerId
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['name', 'description', 'memberIds', 'updatedAt']);
 
-      allow delete: if request.auth != null
-                    && resource.data.ownerId == request.auth.uid;
+      allow delete: if isProjectOwner(resource.data);
+    }
+
+    function validStatus(value) {
+      return value in ['todo', 'inProgress', 'review', 'done'];
+    }
+
+    function validStoryPoints(value) {
+      return value in [1, 2, 3, 5, 8];
+    }
+
+    function projectPath(projectId) {
+      return /databases/$(database)/documents/projects/$(projectId);
+    }
+
+    function eventPath(eventId) {
+      return /databases/$(database)/documents/cardEvents/$(eventId);
+    }
+
+    // Toda mudança de status exige um evento "moved" novo, criado no mesmo batch e apontado por
+    // lastEventId. "!exists" impede reutilizar um evento antigo (eventos nunca são apagados).
+    function statusChangeHasEvent(cardId) {
+      let eventId = request.resource.data.lastEventId;
+      return eventId is string
+             && !exists(eventPath(eventId))
+             && existsAfter(eventPath(eventId))
+             && getAfter(eventPath(eventId)).data.type == 'moved'
+             && getAfter(eventPath(eventId)).data.cardId == cardId
+             && getAfter(eventPath(eventId)).data.createdBy == request.auth.uid
+             && getAfter(eventPath(eventId)).data.fromStatus == resource.data.status
+             && getAfter(eventPath(eventId)).data.toStatus == request.resource.data.status;
+    }
+
+    // Participante só pode mover entre todo, inProgress e review. Só o admin move para done.
+    function canMoveTo(projectData, toStatus) {
+      return isProjectOwner(projectData)
+             || (isProjectMember(projectData) && toStatus in ['todo', 'inProgress', 'review']);
     }
 
     match /cards/{cardId} {
       allow create: if request.auth != null
                     && request.resource.data.createdBy == request.auth.uid
-                    && get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.ownerId == request.auth.uid;
+                    && request.resource.data.keys().hasOnly([
+                         'projectId', 'title', 'description', 'storyPoints', 'status',
+                         'createdBy', 'createdAt', 'updatedAt'
+                       ])
+                    && request.resource.data.keys().hasAll([
+                         'projectId', 'title', 'description', 'storyPoints', 'status',
+                         'createdBy', 'createdAt', 'updatedAt'
+                       ])
+                    && request.resource.data.projectId is string
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() > 0
+                    && request.resource.data.description is string
+                    && request.resource.data.status == 'todo'
+                    && validStoryPoints(request.resource.data.storyPoints)
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.updatedAt == request.time
+                    && isProjectOwner(get(projectPath(request.resource.data.projectId)).data);
 
-      // Firestore rejects list queries whose rule can't be proven from the query's
-      // own filters (get() to the parent project doesn't qualify), so read/update/delete
-      // are based directly on createdBy, which every card query filters by.
-      allow read: if request.auth != null
-                  && resource.data.createdBy == request.auth.uid;
+      // Membros do projeto leem os cartões. A consulta filtra por projectId.
+      allow read: if isProjectMember(get(projectPath(resource.data.projectId)).data);
 
       allow update: if request.auth != null
-                    && resource.data.createdBy == request.auth.uid
+                    && isProjectMember(get(projectPath(resource.data.projectId)).data)
                     && request.resource.data.projectId == resource.data.projectId
-                    && request.resource.data.createdBy == resource.data.createdBy;
+                    && request.resource.data.createdBy == resource.data.createdBy
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['title', 'description', 'storyPoints', 'status', 'completedAt', 'updatedAt', 'lastEventId'])
+                    && request.resource.data.updatedAt == request.time
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastEventId'])
+                        || request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+                        || statusChangeHasEvent(cardId))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+                        || canMoveTo(get(projectPath(resource.data.projectId)).data, request.resource.data.status))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['title'])
+                        || (isProjectOwner(get(projectPath(resource.data.projectId)).data)
+                            && request.resource.data.title is string
+                            && request.resource.data.title.size() > 0))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['description'])
+                        || (isProjectOwner(get(projectPath(resource.data.projectId)).data)
+                            && request.resource.data.description is string))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['storyPoints'])
+                        || (isProjectOwner(get(projectPath(resource.data.projectId)).data)
+                            && validStoryPoints(request.resource.data.storyPoints)))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+                        || validStatus(request.resource.data.status))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['completedAt'])
+                        || request.resource.data.completedAt == null
+                        || request.resource.data.completedAt == request.time);
 
       allow delete: if request.auth != null
-                    && resource.data.createdBy == request.auth.uid;
+                    && isProjectOwner(get(projectPath(resource.data.projectId)).data);
+    }
+
+    // Histórico imutável: criação e leitura por membros do projeto. O estado do cartão é
+    // conferido com get() (antes do batch) e getAfter()/existsAfter() (depois).
+    function cardPath(cardId) {
+      return /databases/$(database)/documents/cards/$(cardId);
+    }
+
+    function validCardEventShape(event) {
+      return event.keys().hasOnly([
+               'cardId', 'projectId', 'type', 'fromStatus', 'toStatus',
+               'storyPoints', 'createdBy', 'createdAt'
+             ])
+             && event.keys().hasAll([
+               'cardId', 'projectId', 'type', 'fromStatus', 'toStatus',
+               'storyPoints', 'createdBy', 'createdAt'
+             ])
+             && event.createdBy == request.auth.uid
+             && event.createdAt == request.time
+             && event.cardId is string
+             && event.projectId is string
+             && event.type in ['created', 'moved', 'deleted']
+             && (event.fromStatus == null || validStatus(event.fromStatus))
+             && (event.toStatus == null || validStatus(event.toStatus))
+             && (event.storyPoints == null || validStoryPoints(event.storyPoints))
+             && isProjectMember(get(projectPath(event.projectId)).data);
+    }
+
+    function validCreatedEvent(event) {
+      return event.fromStatus == null
+             && event.toStatus == 'todo'
+             && !exists(cardPath(event.cardId))
+             && existsAfter(cardPath(event.cardId))
+             && getAfter(cardPath(event.cardId)).data.projectId == event.projectId
+             && getAfter(cardPath(event.cardId)).data.createdBy == request.auth.uid
+             && getAfter(cardPath(event.cardId)).data.status == 'todo'
+             && getAfter(cardPath(event.cardId)).data.storyPoints == event.storyPoints;
+    }
+
+    function validMovedEvent(event, eventId) {
+      return event.fromStatus != null
+             && event.toStatus != null
+             && event.fromStatus != event.toStatus
+             && get(cardPath(event.cardId)).data.projectId == event.projectId
+             && get(cardPath(event.cardId)).data.status == event.fromStatus
+             && getAfter(cardPath(event.cardId)).data.status == event.toStatus
+             && getAfter(cardPath(event.cardId)).data.lastEventId == eventId;
+    }
+
+    function validDeletedEvent(event) {
+      return event.toStatus == null
+             && get(cardPath(event.cardId)).data.projectId == event.projectId
+             && !existsAfter(cardPath(event.cardId));
+    }
+
+    match /cardEvents/{eventId} {
+      allow read: if isProjectMember(get(projectPath(resource.data.projectId)).data);
+
+      allow create: if request.auth != null
+                    && validCardEventShape(request.resource.data)
+                    && (
+                      (request.resource.data.type == 'created' && validCreatedEvent(request.resource.data))
+                      || (request.resource.data.type == 'moved' && validMovedEvent(request.resource.data, eventId))
+                      || (request.resource.data.type == 'deleted' && validDeletedEvent(request.resource.data))
+                    );
+
+      allow update, delete: if false;
     }
 
     match /{document=**} {

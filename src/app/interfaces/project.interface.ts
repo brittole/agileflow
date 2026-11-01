@@ -5,6 +5,7 @@ export interface IProject {
   name: string;
   description: string;
   ownerId: string;
+  memberIds: string[];
   createdAt: Timestamp | null;
   updatedAt: Timestamp | null;
 }

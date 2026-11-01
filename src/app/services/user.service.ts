@@ -21,11 +21,29 @@ export class UserService {
       atualizadoEm: now
     };
 
-    await setDoc(doc(db, this.collectionName, uid), profile);
+    const batch = [
+      setDoc(doc(db, this.collectionName, uid), profile),
+      setDoc(doc(db, 'userEmails', email.toLowerCase().trim()), { uid }),
+    ];
+
+    await Promise.all(batch);
   }
 
   async getUserProfile(uid: string): Promise<IUserProfile | null> {
     const snapshot = await getDoc(doc(db, this.collectionName, uid));
     return snapshot.exists() ? (snapshot.data() as IUserProfile) : null;
+  }
+
+  async getUserProfiles(uids: string[]): Promise<IUserProfile[]> {
+    const profiles: IUserProfile[] = [];
+
+    for (const uid of uids) {
+      const profile = await this.getUserProfile(uid);
+      if (profile) {
+        profiles.push(profile);
+      }
+    }
+
+    return profiles;
   }
 }

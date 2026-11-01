@@ -1,11 +1,12 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { CARD_STORY_POINTS, CardStatus, CardStoryPoints } from '../../interfaces/card.interface';
 import { Card } from '../../models/card.model';
 import { Project } from '../../models/project.model';
+import { AuthService } from '../../services/auth.service';
 import { CardService } from '../../services/card.service';
 import { ProjectService } from '../../services/project.service';
 import { CardDetail } from '../card-detail/card-detail';
@@ -16,14 +17,15 @@ interface IKanbanColumn {
 }
 
 const KANBAN_COLUMNS: IKanbanColumn[] = [
-  { status: 'todo', label: 'A fazer' },
+  { status: 'todo', label: 'Backlog' },
   { status: 'inProgress', label: 'Em andamento' },
+  { status: 'review', label: 'Revisão' },
   { status: 'done', label: 'Concluído' },
 ];
 
 @Component({
   selector: 'app-kanban',
-  imports: [ReactiveFormsModule, CardDetail],
+  imports: [ReactiveFormsModule, CardDetail, RouterLink],
   templateUrl: './kanban.html',
   styleUrl: './kanban.scss',
 })
@@ -31,6 +33,7 @@ export class Kanban implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly projectService = inject(ProjectService);
   private readonly cardService = inject(CardService);
+  private readonly authService = inject(AuthService);
   private readonly fb = inject(FormBuilder);
 
   private routeSubscription?: Subscription;
@@ -53,6 +56,12 @@ export class Kanban implements OnInit, OnDestroy {
   readonly formError = signal<string | null>(null);
 
   readonly selectedCard = signal<Card | null>(null);
+
+  readonly isOwner = computed(() => {
+    const current = this.project();
+    const uid = this.authService.getCurrentUser()?.uid;
+    return current !== null && current.ownerId === uid;
+  });
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
@@ -155,6 +164,11 @@ export class Kanban implements OnInit, OnDestroy {
   }
 
   onDragStart(event: DragEvent, card: Card): void {
+    if (!this.isOwner() && card.status === 'done') {
+      event.preventDefault();
+      return;
+    }
+
     this.draggedCardId = card.id;
     event.dataTransfer?.setData('text/plain', card.id);
 
@@ -183,10 +197,17 @@ export class Kanban implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.isOwner() && status === 'done') {
+      this.errorMessage.set('Apenas o administrador pode finalizar cartões.');
+      return;
+    }
+
     try {
       await this.cardService.updateCardStatus(cardId, status);
-    } catch {
-      this.errorMessage.set('Não foi possível mover o card.');
+    } catch (error) {
+      this.errorMessage.set(
+        error instanceof Error ? error.message : 'Não foi possível mover o card.',
+      );
     }
   }
 

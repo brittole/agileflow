@@ -8,6 +8,7 @@ export class Project implements IProject {
     public name: string,
     public description: string,
     public ownerId: string,
+    public memberIds: string[],
     public createdAt: IProject['createdAt'],
     public updatedAt: IProject['updatedAt'],
   ) {}
@@ -20,6 +21,7 @@ export class Project implements IProject {
       data['name'],
       data['description'],
       data['ownerId'],
+      data['memberIds'] ?? [],
       data['createdAt'] ?? null,
       data['updatedAt'] ?? null,
     );
@@ -33,6 +35,7 @@ export class Project implements IProject {
       data['name'],
       data['description'],
       data['ownerId'],
+      data['memberIds'] ?? [],
       data['createdAt'] ?? null,
       data['updatedAt'] ?? null,
     );

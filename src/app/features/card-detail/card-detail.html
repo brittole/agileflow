@@ -12,7 +12,13 @@
     <form class="card-form" [formGroup]="form" (ngSubmit)="onSubmit()">
       <div class="form-field">
         <label for="detail-title">Título</label>
-        <input id="detail-title" type="text" formControlName="title" placeholder="Título do card" />
+        <input
+          id="detail-title"
+          type="text"
+          formControlName="title"
+          placeholder="Título do card"
+          [readonly]="!isOwner()"
+        />
         @if (title.invalid && title.touched) {
           <span class="form-field__error">O título é obrigatório.</span>
         }
@@ -25,12 +31,13 @@
           formControlName="description"
           rows="3"
           placeholder="Descreva o card (opcional)"
+          [readonly]="!isOwner()"
         ></textarea>
       </div>
 
       <div class="form-field">
         <label for="detail-storyPoints">Story Points</label>
-        <select id="detail-storyPoints" formControlName="storyPoints">
+        <select id="detail-storyPoints" formControlName="storyPoints" [disabled]="!isOwner()">
           <option [ngValue]="null" disabled>Selecione</option>
           @for (points of storyPointsOptions; track points) {
             <option [ngValue]="points">{{ points }}</option>
@@ -42,17 +49,21 @@
       </div>
 
       <div class="modal__actions">
-        <button
-          type="button"
-          class="btn btn--danger"
-          (click)="onDelete()"
-          [disabled]="isDeleting() || isSaving()"
-        >
-          {{ isDeleting() ? 'Excluindo...' : 'Excluir card' }}
-        </button>
-        <button type="submit" class="btn btn--primary" [disabled]="isSaving() || isDeleting()">
-          {{ isSaving() ? 'Salvando...' : 'Salvar alterações' }}
-        </button>
+        @if (isOwner()) {
+          <button
+            type="button"
+            class="btn btn--danger"
+            (click)="onDelete()"
+            [disabled]="isDeleting() || isSaving()"
+          >
+            {{ isDeleting() ? 'Excluindo...' : 'Excluir card' }}
+          </button>
+          <button type="submit" class="btn btn--primary" [disabled]="isSaving() || isDeleting()">
+            {{ isSaving() ? 'Salvando...' : 'Salvar alterações' }}
+          </button>
+        } @else {
+          <p class="modal__readonly">Apenas o administrador pode editar ou excluir cartões.</p>
+        }
       </div>
     </form>
   </div>

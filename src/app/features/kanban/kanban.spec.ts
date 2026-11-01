@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { Kanban } from './kanban';
 
@@ -8,7 +9,8 @@ describe('Kanban', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [Kanban]
+      imports: [Kanban],
+      providers: [provideRouter([])]
     })
     .compileComponents();
 

@@ -13,6 +13,8 @@ export class Card implements ICard {
     public createdAt: ICard['createdAt'],
     public updatedAt: ICard['updatedAt'],
     public createdBy: string,
+    public completedAt: ICard['completedAt'] = null,
+    public lastEventId: ICard['lastEventId'] = null,
   ) {}
 
   static fromFirestore(snapshot: QueryDocumentSnapshot<DocumentData>): Card {
@@ -28,6 +30,8 @@ export class Card implements ICard {
       data['createdAt'] ?? null,
       data['updatedAt'] ?? null,
       data['createdBy'],
+      data['completedAt'] ?? null,
+      data['lastEventId'] ?? null,
     );
   }
 }

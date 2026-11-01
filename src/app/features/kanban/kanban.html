@@ -7,9 +7,29 @@
         <h1>{{ currentProject.name }}</h1>
         <p>{{ currentProject.description }}</p>
       </div>
-      <button type="button" class="btn btn--primary" (click)="toggleForm()">
-        + Novo card
-      </button>
+      <div class="kanban__actions">
+        @if (isOwner()) {
+          <a
+            type="button"
+            class="btn btn--secondary"
+            [routerLink]="['/projects', currentProject.id, 'team']"
+          >
+            Gerenciar equipe
+          </a>
+        }
+        <a
+          type="button"
+          class="btn btn--secondary"
+          [routerLink]="['/projects', currentProject.id, 'performance']"
+        >
+          Desempenho
+        </a>
+        @if (isOwner()) {
+          <button type="button" class="btn btn--primary" (click)="toggleForm()">
+            + Novo card
+          </button>
+        }
+      </div>
     </div>
 
     @if (errorMessage()) {
@@ -71,7 +91,8 @@
           @for (card of cardsForStatus(column.status); track card.id) {
             <article
               class="card-item"
-              draggable="true"
+              [class.card-item--readonly]="!isOwner() && column.status === 'done'"
+              [attr.draggable]="isOwner() || column.status !== 'done' ? 'true' : 'false'"
               (dragstart)="onDragStart($event, card)"
               (click)="openCard(card)"
             >
