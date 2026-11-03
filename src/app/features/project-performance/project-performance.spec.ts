@@ -4,6 +4,7 @@ import { of } from 'rxjs';
 
 import { IProjectMetrics } from '../../interfaces/project-metrics.interface';
 import { AiService } from '../../services/ai.service';
+import { AuthService } from '../../services/auth.service';
 import { MetricsService } from '../../services/metrics.service';
 import { ProjectService } from '../../services/project.service';
 import { ProjectPerformance } from './project-performance';
@@ -35,14 +36,26 @@ describe('ProjectPerformance', () => {
     metricsService = jasmine.createSpyObj<MetricsService>('MetricsService', ['getProjectMetrics']);
     metricsService.getProjectMetrics.and.resolveTo(makeMetrics());
 
-    aiService = jasmine.createSpyObj<AiService>('AiService', ['analyzeProject']);
+    aiService = jasmine.createSpyObj<AiService>('AiService', [
+      'analyzeProject',
+      'getCachedDiagnosis',
+      'setCachedDiagnosis',
+      'compareProjects',
+      'getCachedComparison',
+      'setCachedComparison',
+    ]);
 
     const projectService = jasmine.createSpyObj<ProjectService>('ProjectService', [
       'getProjectById$',
+      'getProjects$',
     ]);
     projectService.getProjectById$.and.returnValue(
       of({ id: 'project-1', name: 'Projeto Teste' } as never),
     );
+    projectService.getProjects$.and.returnValue(of([]));
+
+    const authService = jasmine.createSpyObj<AuthService>('AuthService', ['getUidWhenReady$']);
+    authService.getUidWhenReady$.and.returnValue(of('user-1'));
 
     await TestBed.configureTestingModule({
       imports: [ProjectPerformance],
@@ -51,6 +64,7 @@ describe('ProjectPerformance', () => {
         { provide: MetricsService, useValue: metricsService },
         { provide: AiService, useValue: aiService },
         { provide: ProjectService, useValue: projectService },
+        { provide: AuthService, useValue: authService },
         {
           provide: ActivatedRoute,
           useValue: { paramMap: of({ get: () => 'project-1' }) },

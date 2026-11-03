@@ -259,15 +259,15 @@ describe('firestore.rules', function () {
     });
 
     it('participante move entre todo, inProgress e review, mas não para done', async () => {
-      await assertSucceeds(moveCard(bobDb(), 'c-shared', 'todo', 'inProgress', { createdBy: BOB }));
-      await assertSucceeds(moveCard(bobDb(), 'c-shared', 'inProgress', 'review', { createdBy: BOB }));
-      await assertFails(moveCard(bobDb(), 'c-shared', 'review', 'done', { createdBy: BOB }));
+      await assertSucceeds(moveCard(bobDb(), 'c-shared', 'todo', 'inProgress', { createdBy: BOB, projectId: 'p3' }));
+      await assertSucceeds(moveCard(bobDb(), 'c-shared', 'inProgress', 'review', { createdBy: BOB, projectId: 'p3' }));
+      await assertFails(moveCard(bobDb(), 'c-shared', 'review', 'done', { createdBy: BOB, projectId: 'p3' }));
     });
 
     it('admin move para done e devolve de review para inProgress', async () => {
-      await assertSucceeds(moveCard(aliceDb(), 'c-shared', 'todo', 'review'));
-      await assertSucceeds(moveCard(aliceDb(), 'c-shared', 'review', 'inProgress'));
-      await assertSucceeds(moveCard(aliceDb(), 'c-shared', 'inProgress', 'done'));
+      await assertSucceeds(moveCard(aliceDb(), 'c-shared', 'todo', 'review', { projectId: 'p3' }));
+      await assertSucceeds(moveCard(aliceDb(), 'c-shared', 'review', 'inProgress', { projectId: 'p3' }));
+      await assertSucceeds(moveCard(aliceDb(), 'c-shared', 'inProgress', 'done', { projectId: 'p3' }));
     });
 
     it('dono exclui cartão sem evento (fluxo com flag desligado)', async () => {

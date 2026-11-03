@@ -1,6 +1,6 @@
 import { Env, authenticate, AuthError } from './auth';
 import { verifyProjectAccess, ProjectAccessError } from './firestore';
-import { analyzeWithGemini, GeminiError } from './gemini';
+import { analyzeWithGemini, compareWithGemini, GeminiError } from './gemini';
 
 interface AnalyzeRequest {
   projectId: string;
@@ -39,6 +39,13 @@ function isValidMetrics(m: unknown): m is AnalyzeRequest['metrics'] {
   );
 }
 
+interface CompareRequest {
+  projectIdA: string;
+  projectIdB: string;
+  metricsA: AnalyzeRequest['metrics'];
+  metricsB: AnalyzeRequest['metrics'];
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -71,35 +78,87 @@ export default {
 
     const url = new URL(request.url);
 
-    if (url.pathname !== '/analyze') {
-      return errorResponse('Rota não encontrada.', 404);
+    if (url.pathname === '/analyze') {
+      return handleAnalyze(request, env);
     }
 
-    try {
-      const user = await authenticate(request, env);
-      const idToken = request.headers.get('Authorization')!.slice(7);
-
-      const body = (await request.json()) as AnalyzeRequest;
-
-      if (!body.projectId || !isValidMetrics(body.metrics)) {
-        return errorResponse('projectId e metrics válidos são obrigatórios.', 400);
-      }
-
-      const project = await verifyProjectAccess(body.projectId, idToken, env);
-
-      const diagnosis = await analyzeWithGemini(body.metrics, project.projectName, env);
-
-      return jsonResponse({ diagnosis });
-    } catch (error) {
-      if (
-        error instanceof AuthError ||
-        error instanceof ProjectAccessError ||
-        error instanceof GeminiError
-      ) {
-        return errorResponse(error.message, error.status);
-      }
-
-      return errorResponse('Erro interno do servidor.', 500);
+    if (url.pathname === '/compare') {
+      return handleCompare(request, env);
     }
+
+    return errorResponse('Rota não encontrada.', 404);
   },
 };
+
+async function handleAnalyze(request: Request, env: Env): Promise<Response> {
+  try {
+    await authenticate(request, env);
+    const idToken = request.headers.get('Authorization')!.slice(7);
+
+    const body = (await request.json()) as AnalyzeRequest;
+
+    if (!body.projectId || !isValidMetrics(body.metrics)) {
+      return errorResponse('projectId e metrics válidos são obrigatórios.', 400);
+    }
+
+    const project = await verifyProjectAccess(body.projectId, idToken, env);
+
+    const diagnosis = await analyzeWithGemini(body.metrics, project.projectName, env);
+
+    return jsonResponse({ diagnosis });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+async function handleCompare(request: Request, env: Env): Promise<Response> {
+  try {
+    await authenticate(request, env);
+    const idToken = request.headers.get('Authorization')!.slice(7);
+
+    const body = (await request.json()) as CompareRequest;
+
+    if (
+      !body.projectIdA ||
+      !body.projectIdB ||
+      !isValidMetrics(body.metricsA) ||
+      !isValidMetrics(body.metricsB)
+    ) {
+      return errorResponse('projectIdA, projectIdB, metricsA e metricsB válidos são obrigatórios.', 400);
+    }
+
+    if (body.projectIdA === body.projectIdB) {
+      return errorResponse('Selecione dois projetos diferentes.', 400);
+    }
+
+    // Valida acesso aos dois projetos antes de chamar a IA.
+    const [projectA, projectB] = await Promise.all([
+      verifyProjectAccess(body.projectIdA, idToken, env),
+      verifyProjectAccess(body.projectIdB, idToken, env),
+    ]);
+
+    const comparison = await compareWithGemini(
+      body.metricsA,
+      projectA.projectName,
+      body.metricsB,
+      projectB.projectName,
+      env,
+    );
+
+    return jsonResponse({ comparison });
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+function handleError(error: unknown): Response {
+  if (
+    error instanceof AuthError ||
+    error instanceof ProjectAccessError ||
+    error instanceof GeminiError
+  ) {
+    return errorResponse(error.message, error.status);
+  }
+
+  return errorResponse('Erro interno do servidor.', 500);
+}

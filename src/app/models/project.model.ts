@@ -9,6 +9,7 @@ export class Project implements IProject {
     public description: string,
     public ownerId: string,
     public memberIds: string[],
+    public memberInfo: Record<string, { nome: string; email: string }>,
     public createdAt: IProject['createdAt'],
     public updatedAt: IProject['updatedAt'],
   ) {}
@@ -22,6 +23,7 @@ export class Project implements IProject {
       data['description'],
       data['ownerId'],
       data['memberIds'] ?? [],
+      data['memberInfo'] ?? {},
       data['createdAt'] ?? null,
       data['updatedAt'] ?? null,
     );
@@ -36,6 +38,7 @@ export class Project implements IProject {
       data['description'],
       data['ownerId'],
       data['memberIds'] ?? [],
+      data['memberInfo'] ?? {},
       data['createdAt'] ?? null,
       data['updatedAt'] ?? null,
     );

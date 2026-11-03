@@ -5,8 +5,8 @@
 }
 
 .dashboard__error {
-  background: #fdeceb;
-  color: #b3261e;
+  background: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-size: 0.85rem;
@@ -17,7 +17,7 @@
   background: linear-gradient(135deg, var(--color-primary), #3d7bff);
   border-radius: var(--radius-lg);
   padding: 32px;
-  color: #fff;
+  color: #f1f4f9;
   box-shadow: var(--shadow-md);
 
   &__text {
@@ -71,11 +71,11 @@
     background: var(--color-primary-light);
 
     &--projects {
-      background: #e8effe;
+      background: #1a2a3a;
     }
 
     &--cards {
-      background: #eef2ff;
+      background: #1a2a3a;
     }
 
     &--progress {

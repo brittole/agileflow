@@ -47,6 +47,7 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 .firebase/
+.emulator-data/
 
 # Cloudflare Worker (chave Gemini local)
 worker/.dev.vars

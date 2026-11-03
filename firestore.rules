@@ -22,7 +22,7 @@ service cloud.firestore {
     function isProjectMember(projectData) {
       return request.auth != null
              && (projectData.ownerId == request.auth.uid
-                 || request.auth.uid in projectData.memberIds);
+                 || ('memberIds' in projectData && request.auth.uid in projectData.memberIds));
     }
 
     function isProjectOwner(projectData) {
@@ -36,11 +36,11 @@ service cloud.firestore {
 
       allow read: if isProjectMember(resource.data);
 
-      // Só o dono edita. Pode mudar name, description e memberIds; ownerId é imutável.
+      // Só o dono edita. Pode mudar name, description, memberIds e memberInfo; ownerId é imutável.
       allow update: if isProjectOwner(resource.data)
                     && request.resource.data.ownerId == resource.data.ownerId
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['name', 'description', 'memberIds', 'updatedAt']);
+                         .hasOnly(['name', 'description', 'memberIds', 'memberInfo', 'updatedAt']);
 
       allow delete: if isProjectOwner(resource.data);
     }

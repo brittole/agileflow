@@ -29,16 +29,16 @@
   }
 
   &__error {
-    background: #fdeceb;
-    color: #b3261e;
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
     border-radius: var(--radius-md);
     padding: 10px 14px;
     font-size: 0.85rem;
   }
 
   &__success {
-    background: #e7f6ec;
-    color: #1a7f37;
+    background: #1a2e1a;
+    color: #4ade80;
     border-radius: var(--radius-md);
     padding: 10px 14px;
     font-size: 0.85rem;
@@ -134,13 +134,13 @@
 
   &--primary {
     background: var(--color-primary);
-    color: #fff;
+    color: #f1f4f9;
   }
 
   &--danger {
-    background: #fdeceb;
-    color: #b3261e;
-    border-color: #f5c6c0;
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.3);
   }
 
   &--sm {
@@ -176,6 +176,6 @@
 
   &__error {
     font-size: 0.8rem;
-    color: #b3261e;
+    color: #ff6b6b;
   }
 }

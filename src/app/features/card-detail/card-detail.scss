@@ -33,7 +33,7 @@
 
   &__error {
     font-size: 0.8rem;
-    color: #b3261e;
+    color: #ff6b6b;
   }
 }
 
@@ -52,11 +52,11 @@
 
   &--primary {
     background: var(--color-primary);
-    color: #fff;
+    color: #f1f4f9;
   }
 
   &--danger {
-    background: #fdeceb;
-    color: #b3261e;
+    background: rgba(255, 107, 107, 0.15);
+    color: #ff6b6b;
   }
 }

@@ -13,13 +13,14 @@ import {
   writeBatch,
   WriteBatch,
 } from 'firebase/firestore';
-import { Observable, of, switchMap } from 'rxjs';
+import { Observable, firstValueFrom, of, switchMap } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { db } from '../core/firebase';
 import { CardEventType, ICardEvent } from '../interfaces/card-event.interface';
 import { CardStatus, CardStoryPoints, ICreateCard } from '../interfaces/card.interface';
 import { Card } from '../models/card.model';
+import { CardEvent } from '../models/card-event.model';
 import { AuthService } from './auth.service';
 
 @Injectable({
@@ -299,6 +300,24 @@ export class CardService {
     });
 
     return eventRef.id;
+  }
+
+  async getProjectEvents(projectId: string): Promise<CardEvent[]> {
+    const uid = await firstValueFrom(this.authService.getUidWhenReady$());
+
+    if (!uid) {
+      throw new Error('Usuário não autenticado.');
+    }
+
+    const snapshot = await getDocs(
+      query(
+        collection(db, this.eventsCollectionName),
+        where('projectId', '==', projectId),
+        orderBy('createdAt', 'desc'),
+      ),
+    );
+
+    return snapshot.docs.map((doc) => CardEvent.fromFirestore(doc));
   }
 
   getAllCardsForCurrentUser$(): Observable<Card[]> {

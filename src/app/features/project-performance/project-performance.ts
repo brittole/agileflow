@@ -1,10 +1,11 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 
 import { IProjectMetrics } from '../../interfaces/project-metrics.interface';
 import { Project } from '../../models/project.model';
-import { AiService, IAiDiagnosis } from '../../services/ai.service';
+import { AiService, IAiComparison, IAiDiagnosis } from '../../services/ai.service';
+import { AuthService } from '../../services/auth.service';
 import { MetricsService } from '../../services/metrics.service';
 import { ProjectService } from '../../services/project.service';
 
@@ -21,6 +22,7 @@ export class ProjectPerformance implements OnInit, OnDestroy {
   private readonly projectService = inject(ProjectService);
   private readonly metricsService = inject(MetricsService);
   private readonly aiService = inject(AiService);
+  private readonly authService = inject(AuthService);
 
   private routeSubscription?: Subscription;
   private projectSubscription?: Subscription;
@@ -36,6 +38,16 @@ export class ProjectPerformance implements OnInit, OnDestroy {
   readonly diagnosis = signal<IAiDiagnosis | null>(null);
   readonly isAnalyzing = signal(false);
   readonly aiError = signal<string | null>(null);
+  readonly diagnosisFromCache = signal(false);
+
+  // Comparação entre projetos
+  readonly allProjects = signal<Project[]>([]);
+  readonly compareProjectA = signal<string>('');
+  readonly compareProjectB = signal<string>('');
+  readonly comparison = signal<IAiComparison | null>(null);
+  readonly isComparing = signal(false);
+  readonly compareError = signal<string | null>(null);
+  readonly comparisonFromCache = signal(false);
 
   readonly statusDistribution = computed(() => {
     const current = this.metrics();
@@ -72,6 +84,13 @@ export class ProjectPerformance implements OnInit, OnDestroy {
       this.projectId.set(projectId);
       this.loadProject(projectId);
       this.loadMetrics(projectId);
+      this.loadAllProjects();
+    });
+  }
+
+  private loadAllProjects(): void {
+    this.projectService.getProjects$().subscribe({
+      next: (projects) => this.allProjects.set(projects),
     });
   }
 
@@ -118,22 +137,93 @@ export class ProjectPerformance implements OnInit, OnDestroy {
     const current = this.metrics();
     const projectId = this.project()?.id;
 
-    if (!current || !projectId) {
+    if (!current || !projectId || this.isAnalyzing()) {
       return;
     }
 
     this.isAnalyzing.set(true);
     this.aiError.set(null);
     this.diagnosis.set(null);
+    this.diagnosisFromCache.set(false);
 
     try {
-      this.diagnosis.set(await this.aiService.analyzeProject(projectId, current));
+      const uid = await firstValueFrom(this.authService.getUidWhenReady$());
+      if (!uid) {
+        throw new Error('Usuário não autenticado.');
+      }
+
+      const result = await this.aiService.analyzeProject(projectId, current);
+      this.diagnosis.set(result);
+      this.aiService.setCachedDiagnosis(projectId, uid, result);
     } catch (error) {
-      this.aiError.set(
-        error instanceof Error ? error.message : 'Não foi possível gerar o diagnóstico.',
-      );
+      const uid = await firstValueFrom(this.authService.getUidWhenReady$());
+      const cached = uid ? this.aiService.getCachedDiagnosis(projectId, uid) : null;
+
+      if (cached) {
+        this.diagnosis.set(cached.data);
+        this.diagnosisFromCache.set(true);
+        this.aiError.set(
+          'Não foi possível gerar uma nova análise. Exibindo a última análise salva de ' +
+            new Date(cached.timestamp).toLocaleString('pt-BR') +
+            '.',
+        );
+      } else {
+        this.aiError.set(
+          error instanceof Error ? error.message : 'Não foi possível gerar o diagnóstico.',
+        );
+      }
     } finally {
       this.isAnalyzing.set(false);
+    }
+  }
+
+  async compareProjects(): Promise<void> {
+    const idA = this.compareProjectA();
+    const idB = this.compareProjectB();
+
+    if (!idA || !idB || idA === idB || this.isComparing()) {
+      this.compareError.set('Selecione dois projetos diferentes.');
+      return;
+    }
+
+    this.isComparing.set(true);
+    this.compareError.set(null);
+    this.comparison.set(null);
+    this.comparisonFromCache.set(false);
+
+    try {
+      const uid = await firstValueFrom(this.authService.getUidWhenReady$());
+      if (!uid) {
+        throw new Error('Usuário não autenticado.');
+      }
+
+      const [metricsA, metricsB] = await Promise.all([
+        this.metricsService.getProjectMetrics(idA, PERIOD_DAYS),
+        this.metricsService.getProjectMetrics(idB, PERIOD_DAYS),
+      ]);
+
+      const result = await this.aiService.compareProjects(idA, metricsA, idB, metricsB);
+      this.comparison.set(result);
+      this.aiService.setCachedComparison(idA, idB, uid, result);
+    } catch (error) {
+      const uid = await firstValueFrom(this.authService.getUidWhenReady$());
+      const cached = uid ? this.aiService.getCachedComparison(idA, idB, uid) : null;
+
+      if (cached) {
+        this.comparison.set(cached.data);
+        this.comparisonFromCache.set(true);
+        this.compareError.set(
+          'Não foi possível gerar uma nova comparação. Exibindo a última comparação salva de ' +
+            new Date(cached.timestamp).toLocaleString('pt-BR') +
+            '.',
+        );
+      } else {
+        this.compareError.set(
+          error instanceof Error ? error.message : 'Não foi possível comparar os projetos.',
+        );
+      }
+    } finally {
+      this.isComparing.set(false);
     }
   }
 }

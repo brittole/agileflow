@@ -124,6 +124,12 @@
         {{ isAnalyzing() ? 'Analisando...' : 'Analisar projeto' }}
       </button>
 
+      @if (diagnosisFromCache()) {
+        <div class="panel--ai__cache-notice">
+          ⚠️ Esta é uma análise anterior. Clique em "Analisar projeto" para tentar gerar uma nova.
+        </div>
+      }
+
       @if (aiError()) {
         <div class="panel--ai__error">{{ aiError() }}</div>
       }
@@ -174,6 +180,92 @@
           <p class="panel--ai__placeholder">
             Clique em "Analisar projeto" para gerar o diagnóstico.
           </p>
+        </div>
+      }
+    </section>
+
+    <section class="panel panel--compare">
+      <h2>Comparar projetos</h2>
+      <p>Selecione dois projetos aos quais você tem acesso para comparar as métricas com a IA.</p>
+
+      <div class="compare__selects">
+        <div class="form-field">
+          <label for="compareA">Projeto A</label>
+          <select id="compareA" [value]="compareProjectA()" (change)="compareProjectA.set($any($event.target).value)">
+            <option value="">Selecione</option>
+            @for (p of allProjects(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="compareB">Projeto B</label>
+          <select id="compareB" [value]="compareProjectB()" (change)="compareProjectB.set($any($event.target).value)">
+            <option value="">Selecione</option>
+            @for (p of allProjects(); track p.id) {
+              <option [value]="p.id">{{ p.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="isComparing() || !compareProjectA() || !compareProjectB()"
+        (click)="compareProjects()"
+      >
+        {{ isComparing() ? 'Comparando...' : 'Comparar projetos' }}
+      </button>
+
+      @if (comparisonFromCache()) {
+        <div class="panel--ai__cache-notice">
+          ⚠️ Esta é uma comparação anterior. Clique em "Comparar projetos" para tentar gerar uma nova.
+        </div>
+      }
+
+      @if (compareError()) {
+        <div class="panel--ai__error">{{ compareError() }}</div>
+      }
+
+      @if (comparison(); as c) {
+        <div class="panel--ai__result">
+          <h3>Resumo</h3>
+          <p>{{ c.summary }}</p>
+
+          <div class="compare__grid">
+            <div><strong>Melhor projeto:</strong> {{ c.betterProject }}</div>
+            <div><strong>Maior throughput:</strong> {{ c.higherThroughput }}</div>
+            <div><strong>Menor cycle time:</strong> {{ c.lowerCycleTime }}</div>
+            <div><strong>Mais cartões parados:</strong> {{ c.moreStuck }}</div>
+            <div><strong>Melhor distribuição:</strong> {{ c.betterDistribution }}</div>
+          </div>
+
+          @if (c.aDoesBetter.length) {
+            <h3>O que o Projeto A faz melhor</h3>
+            <ul>@for (i of c.aDoesBetter; track i) { <li>{{ i }}</li> }</ul>
+          }
+          @if (c.practicesForB.length) {
+            <h3>Práticas do A que ajudariam o B</h3>
+            <ul>@for (i of c.practicesForB; track i) { <li>{{ i }}</li> }</ul>
+          }
+          @if (c.bottlenecksA.length) {
+            <h3>Gargalos do Projeto A</h3>
+            <ul>@for (i of c.bottlenecksA; track i) { <li>{{ i }}</li> }</ul>
+          }
+          @if (c.bottlenecksB.length) {
+            <h3>Gargalos do Projeto B</h3>
+            <ul>@for (i of c.bottlenecksB; track i) { <li>{{ i }}</li> }</ul>
+          }
+          @if (c.improvementsA.length) {
+            <h3>Melhorias para o Projeto A</h3>
+            <ul>@for (i of c.improvementsA; track i) { <li>{{ i }}</li> }</ul>
+          }
+          @if (c.improvementsB.length) {
+            <h3>Melhorias para o Projeto B</h3>
+            <ul>@for (i of c.improvementsB; track i) { <li>{{ i }}</li> }</ul>
+          }
         </div>
       }
     </section>

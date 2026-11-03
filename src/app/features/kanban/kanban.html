@@ -20,6 +20,13 @@
         <a
           type="button"
           class="btn btn--secondary"
+          [routerLink]="['/projects', currentProject.id, 'history']"
+        >
+          Histórico
+        </a>
+        <a
+          type="button"
+          class="btn btn--secondary"
           [routerLink]="['/projects', currentProject.id, 'performance']"
         >
           Desempenho

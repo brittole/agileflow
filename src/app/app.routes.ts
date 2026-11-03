@@ -52,6 +52,11 @@ export const routes: Routes = [
           import('./features/project-team/project-team').then((m) => m.ProjectTeam),
       },
       {
+        path: 'projects/:projectId/history',
+        loadComponent: () =>
+          import('./features/project-history/project-history').then((m) => m.ProjectHistory),
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/profile/profile').then((m) => m.Profile),
