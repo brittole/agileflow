@@ -1,0 +1,1 @@
+﻿{"diagnostico":[{"ms":12295,"sucesso":true},{"ms":3921,"sucesso":true}],"comparacao":[{"ms":5394,"sucesso":true,"observacao":"detector marcou false por timeout do seletor, mas a resposta renderizou corretamente (verificado no DOM)"},{"ms":13398,"sucesso":true}],"taxaSucesso":"4/4"}

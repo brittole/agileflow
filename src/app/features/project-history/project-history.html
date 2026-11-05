@@ -1,6 +1,6 @@
-<section class="Histórico">
-  <header class="Histórico__header">
-    <a class="Histórico__back" [routerLink]="['/projects', projectId(), 'kanban']">
+<section class="history">
+  <header class="history__header">
+    <a class="history__back" [routerLink]="['/projects', projectId(), 'kanban']">
       ← Voltar ao Kanban
     </a>
     <h1>Histórico de movimentações</h1>
@@ -10,29 +10,29 @@
   </header>
 
   @if (errorMessage()) {
-    <div class="Histórico__error">{{ errorMessage() }}</div>
+    <div class="history__error">{{ errorMessage() }}</div>
   }
 
   @if (isLoading()) {
-    <p class="Histórico__loading">Carregando histórico...</p>
+    <p class="history__loading">Carregando histórico...</p>
   } @else if (events().length === 0) {
-    <p class="Histórico__empty">Nenhuma movimentação registrada ainda.</p>
+    <p class="history__empty">Nenhuma movimentação registrada ainda.</p>
   } @else {
-    <ul class="Histórico__list">
+    <ul class="history__list">
       @for (event of events(); track event.id) {
-        <li class="Histórico__item">
-          <div class="Histórico__icon" [attr.data-type]="event.type">
+        <li class="history__item">
+          <div class="history__icon" [attr.data-type]="event.type">
             @if (event.type === 'created') { ➕ }
             @else if (event.type === 'deleted') { 🗑️ }
             @else { ↔️ }
           </div>
-          <div class="Histórico__content">
-            <span class="Histórico__card">{{ event.cardTitle }}</span>
-            <span class="Histórico__description">
+          <div class="history__content">
+            <span class="history__card">{{ event.cardTitle }}</span>
+            <span class="history__description">
               <strong>{{ event.createdByName }}</strong> {{ eventDescription(event) }}
             </span>
           </div>
-          <time class="Histórico__date">{{ formatDate(event.createdAt) }}</time>
+          <time class="history__date">{{ formatDate(event.createdAt) }}</time>
         </li>
       }
     </ul>

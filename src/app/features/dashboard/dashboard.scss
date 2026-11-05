@@ -14,7 +14,7 @@
 
 
 .welcome-card {
-  background: linear-gradient(135deg, var(--color-primary), #3d7bff);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
   border-radius: var(--radius-lg);
   padding: 32px;
   color: #f1f4f9;
@@ -71,19 +71,19 @@
     background: var(--color-primary-light);
 
     &--projects {
-      background: #1a2a3a;
+      background: var(--color-primary-light);
     }
 
     &--cards {
-      background: #1a2a3a;
+      background: var(--color-accent-light);
     }
 
     &--progress {
-      background: #fff4e5;
+      background: var(--col-progress-bg);
     }
 
     &--done {
-      background: #e6f7ee;
+      background: var(--col-done-bg);
     }
   }
 

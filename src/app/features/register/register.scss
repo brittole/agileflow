@@ -4,27 +4,33 @@
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background: var(--color-bg);
+  background:
+    radial-gradient(1000px 500px at 85% 0%, rgba(139, 92, 246, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 10% 100%, rgba(79, 124, 255, 0.12), transparent 60%),
+    var(--color-bg);
 }
 
 .register-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  padding: 32px;
+  padding: 36px;
 
   &__header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 
     h1 {
       margin: 0 0 8px;
-      color: var(--color-primary);
-      font-size: 1.6rem;
-      font-weight: 700;
+      font-size: 1.9rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     p {

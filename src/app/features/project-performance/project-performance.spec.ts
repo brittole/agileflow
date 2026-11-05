@@ -96,11 +96,12 @@ describe('ProjectPerformance', () => {
     const distribution = component.statusDistribution();
 
     expect(distribution.map((item) => item.label)).toEqual([
-      'A fazer',
+      'Backlog',
       'Em andamento',
+      'Revisão',
       'Concluído',
     ]);
-    expect(distribution.map((item) => item.percentage)).toEqual([20, 40, 40]);
+    expect(distribution.map((item) => item.percentage)).toEqual([20, 40, 0, 40]);
   });
 
   it('informa quando não há amostra suficiente para o cycle time', async () => {

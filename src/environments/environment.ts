@@ -1,20 +1,21 @@
-export const environment = {
+﻿export const environment = {
   production: false,
   useEmulators: false,
-  aiWorkerUrl: 'http://localhost:8787',
+  aiWorkerUrl: 'https://agileflow-ai.leticiaawsestudo.workers.dev',
 
-  // Só ligar depois de publicar regras do Firestore que permitam criar em "cardEvents".
-  cardEventsEnabled: false,
+  // Regras do Firestore com suporte a "cardEvents" publicadas no agileflow-tcc em 2026-11-05.
+  cardEventsEnabled: true,
 
   firebase: {
-    apiKey: "AIzaSyDSBcFqJQ9ndhw8C07a-ho-8ncT2Xn4lr0",
-    authDomain: "agileflow-2ba9c.firebaseapp.com",
-    projectId: "agileflow-2ba9c",
-    storageBucket: "agileflow-2ba9c.firebasestorage.app",
-    messagingSenderId: "1096264812414",
-    appId: "1:1096264812414:web:b295dca0c8a053b01fd52f"
+    apiKey: "AIzaSyBUhL93VvYXxaRhhkBnuhU41qsv63GB0uk",
+    authDomain: "agileflow-tcc.firebaseapp.com",
+    projectId: "agileflow-tcc",
+    storageBucket: "agileflow-tcc.firebasestorage.app",
+    messagingSenderId: "781654443755",
+    appId: "1:781654443755:web:875e85e62e01001db620ae"
   }
 };
+
 
 
 

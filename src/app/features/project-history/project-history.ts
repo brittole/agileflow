@@ -10,10 +10,10 @@ import { ProjectService } from '../../services/project.service';
 type HistoryEvent = CardEvent & { cardTitle: string; createdByName: string };
 
 const STATUS_LABELS: Record<string, string> = {
-  todo: 'todo',
-  inProgress: 'inProgress',
+  todo: 'Backlog',
+  inProgress: 'Em andamento',
   review: 'Revisão',
-  done: 'done',
+  done: 'Concluído',
 };
 
 @Component({

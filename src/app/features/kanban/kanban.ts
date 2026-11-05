@@ -179,10 +179,16 @@ export class Kanban implements OnInit, OnDestroy {
 
   onDragOver(event: DragEvent): void {
     event.preventDefault();
+    (event.currentTarget as HTMLElement).classList.add('kanban-column--drag-over');
+  }
+
+  onDragLeave(event: DragEvent): void {
+    (event.currentTarget as HTMLElement).classList.remove('kanban-column--drag-over');
   }
 
   async onDrop(event: DragEvent, status: CardStatus): Promise<void> {
     event.preventDefault();
+    (event.currentTarget as HTMLElement).classList.remove('kanban-column--drag-over');
 
     const cardId = this.draggedCardId ?? event.dataTransfer?.getData('text/plain') ?? null;
     this.draggedCardId = null;

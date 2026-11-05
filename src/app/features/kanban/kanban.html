@@ -89,11 +89,15 @@
     <div class="kanban-board">
       @for (column of columns; track column.status) {
         <div
-          class="kanban-column"
+          class="kanban-column kanban-column--{{ column.status }}"
           (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
           (drop)="onDrop($event, column.status)"
         >
-          <h2 class="kanban-column__title">{{ column.label }}</h2>
+          <div class="kanban-column__header">
+            <h2 class="kanban-column__title">{{ column.label }}</h2>
+            <span class="kanban-column__count">{{ cardsForStatus(column.status).length }}</span>
+          </div>
 
           @for (card of cardsForStatus(column.status); track card.id) {
             <article

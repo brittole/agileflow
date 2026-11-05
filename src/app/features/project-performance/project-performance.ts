@@ -57,9 +57,10 @@ export class ProjectPerformance implements OnInit, OnDestroy {
     }
 
     return [
-      { label: 'A fazer', count: current.cardsByStatus.todo, color: '#f59e0b' },
-      { label: 'Em andamento', count: current.cardsByStatus.inProgress, color: '#3b82f6' },
-      { label: 'Concluído', count: current.cardsByStatus.done, color: '#22c55e' },
+      { label: 'Backlog', count: current.cardsByStatus.todo, color: '#8b95ad' },
+      { label: 'Em andamento', count: current.cardsByStatus.inProgress, color: '#4f9dff' },
+      { label: 'Revisão', count: current.cardsByStatus.review, color: '#fbbf24' },
+      { label: 'Concluído', count: current.cardsByStatus.done, color: '#34d399' },
     ].map((item) => ({
       ...item,
       percentage: Math.round((item.count / current.totalCards) * 100),

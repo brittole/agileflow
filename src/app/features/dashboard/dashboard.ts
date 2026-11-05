@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Subscription, combineLatest } from 'rxjs';
+import { Subscription, combineLatest, of } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 
 import { Card } from '../../models/card.model';
 import { Project } from '../../models/project.model';
@@ -33,13 +34,24 @@ export class Dashboard implements OnInit, OnDestroy {
   );
 
   ngOnInit(): void {
-    this.subscription = combineLatest([
-      this.projectService.getProjects$(),
-      this.cardService.getAllCardsForCurrentUser$(),
-    ]).subscribe({
-      next: ([projects, cards]) => {
+    // As regras do Firestore exigem filtro por projectId para listar cartões.
+    // Buscamos os projetos do usuário e, para cada um, os cartões via getCardsByProject$.
+    this.subscription = this.projectService.getProjects$().pipe(
+      switchMap((projects) => {
         this.projects.set(projects);
-        this.cards.set(cards);
+
+        if (projects.length === 0) {
+          return of([] as Card[]);
+        }
+
+        const cardQueries = projects.map((p) => this.cardService.getCardsByProject$(p.id));
+        return combineLatest(cardQueries);
+      }),
+    ).subscribe({
+      next: (cardsArrays) => {
+        // combineLatest emite um array de arrays; achatamos para um único array de cards.
+        const allCards = (cardsArrays as Card[][]).flat();
+        this.cards.set(allCards);
         this.isLoading.set(false);
       },
       error: () => {

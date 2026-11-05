@@ -84,9 +84,18 @@ export class ProjectTeam implements OnInit, OnDestroy {
   }
 
   private async loadMembers(memberIds: string[]): Promise<void> {
+    const project = this.project();
     const members: IMemberInfo[] = [];
 
     for (const uid of memberIds) {
+      // Fonte primária: memberInfo gravado no projeto (acessível a membros).
+      // Fallback: users/{uid} (só funciona para o próprio usuário).
+      const info = project?.memberInfo?.[uid];
+      if (info) {
+        members.push({ uid, email: info.email, nome: info.nome });
+        continue;
+      }
+
       const profile = await this.userService.getUserProfile(uid);
       if (profile) {
         members.push({ uid, email: profile.email, nome: profile.nome });
@@ -133,7 +142,12 @@ export class ProjectTeam implements OnInit, OnDestroy {
         return;
       }
 
-      await this.projectService.addMember(project.id, found.uid);
+      // O perfil público (userEmails) só tem o uid; o nome vem do perfil users/{uid},
+      // que o admin não pode ler de outro usuário. Por isso gravamos memberInfo no projeto.
+      const profile = await this.userService.getUserProfile(found.uid);
+      const nome = profile?.nome ?? email;
+
+      await this.projectService.addMember(project.id, found.uid, { nome, email });
       this.form.reset();
       this.successMessage.set('Participante adicionado com sucesso.');
     } catch {

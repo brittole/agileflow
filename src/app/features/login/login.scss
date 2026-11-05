@@ -4,27 +4,34 @@
   justify-content: center;
   min-height: 100vh;
   padding: 24px;
-  background: var(--color-bg);
+  background:
+    radial-gradient(1000px 500px at 15% 0%, rgba(79, 124, 255, 0.12), transparent 60%),
+    radial-gradient(900px 500px at 90% 100%, rgba(139, 92, 246, 0.12), transparent 60%),
+    var(--color-bg);
 }
 
 .login-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
-  padding: 32px;
+  padding: 36px;
 
   &__header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 
     h1 {
       margin: 0 0 8px;
-      color: var(--color-primary);
-      font-size: 1.6rem;
-      font-weight: 700;
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
     p {
@@ -35,8 +42,9 @@
   }
 
   &__error {
-    background: rgba(255, 107, 107, 0.15);
-    color: #ff6b6b;
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border: 1px solid rgba(255, 107, 107, 0.3);
     border-radius: var(--radius-md);
     padding: 10px 14px;
     font-size: 0.85rem;
@@ -45,12 +53,12 @@
 
   &__footer {
     text-align: center;
-    margin: 20px 0 0;
+    margin: 22px 0 0;
     font-size: 0.9rem;
     color: var(--color-text-muted);
 
     a {
-      color: var(--color-primary);
+      color: var(--color-primary-hover);
       font-weight: 600;
       text-decoration: none;
 
@@ -112,29 +120,32 @@
   cursor: pointer;
   transition:
     background 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    transform 0.12s ease;
 
   &:disabled {
-    opacity: 0.7;
+    opacity: 0.6;
     cursor: not-allowed;
   }
 
   &--primary {
-    background: var(--color-primary);
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
     color: #f1f4f9;
 
     &:hover:not(:disabled) {
-      box-shadow: var(--shadow-sm);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-1px);
     }
   }
 
   &--google {
-    background: var(--color-surface);
+    background: var(--color-surface-2);
     color: var(--color-text);
     border-color: var(--color-border);
 
     &:hover:not(:disabled) {
       background: var(--color-primary-light);
+      border-color: var(--color-primary);
     }
   }
 }

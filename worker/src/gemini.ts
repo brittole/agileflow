@@ -66,6 +66,8 @@ async function callGemini(prompt: string, env: Env): Promise<string> {
     }
 
     if (!response.ok) {
+      const errorBody = await response.text().catch(() => 'sem corpo');
+      console.error(`[Gemini] HTTP ${response.status}: ${errorBody.slice(0, 500)}`);
       throw new GeminiError('Erro ao consultar a IA.', 502);
     }
 

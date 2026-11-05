@@ -12,7 +12,7 @@
 
     p {
       margin: 0;
-      color: var(--color-text-secondary, #5f6368);
+      color: var(--color-text-muted);
       font-size: 0.95rem;
     }
   }
@@ -28,15 +28,16 @@
   }
 
   &__error {
-    background: #fdeceb;
-    color: #b3261e;
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border: 1px solid rgba(255, 107, 107, 0.3);
     border-radius: var(--radius-md);
     padding: 10px 14px;
     font-size: 0.85rem;
   }
 
   &__loading {
-    color: var(--color-text-secondary, #5f6368);
+    color: var(--color-text-muted);
   }
 
   &__panels {
@@ -81,19 +82,19 @@
     flex-shrink: 0;
 
     &--total {
-      background: #eef2ff;
+      background: var(--color-primary-light);
     }
 
     &--done {
-      background: #e7f6ec;
+      background: var(--col-done-bg);
     }
 
     &--wip {
-      background: #fef3e2;
+      background: var(--col-progress-bg);
     }
 
     &--points {
-      background: #e8effe;
+      background: var(--color-accent-light);
     }
   }
 
@@ -105,11 +106,12 @@
   &__value {
     font-size: 1.5rem;
     font-weight: 700;
+    color: var(--color-text);
   }
 
   &__label {
     font-size: 0.8rem;
-    color: var(--color-text-secondary, #5f6368);
+    color: var(--color-text-muted);
   }
 }
 
@@ -127,7 +129,7 @@
   }
 
   &__empty {
-    color: var(--color-text-secondary, #5f6368);
+    color: var(--color-text-muted);
     font-size: 0.9rem;
   }
 
@@ -151,12 +153,12 @@
 
   &__metric-label {
     font-size: 0.85rem;
-    color: var(--color-text-secondary, #5f6368);
+    color: var(--color-text-muted);
   }
 
   &--ai {
     p {
-      color: var(--color-text-secondary, #5f6368);
+      color: var(--color-text-muted);
       font-size: 0.9rem;
     }
 
@@ -171,7 +173,7 @@
     }
 
     &__badge {
-      background: #eef2ff;
+      background: var(--color-primary-light);
       color: var(--color-primary);
       border-radius: 999px;
       padding: 2px 10px;
@@ -208,8 +210,8 @@
 
     &__error {
       margin-top: 12px;
-      background: #fdeceb;
-      color: #b3261e;
+      background: var(--color-danger-bg);
+      color: var(--color-danger);
       border-radius: var(--radius-md);
       padding: 10px 14px;
       font-size: 0.85rem;
@@ -217,9 +219,9 @@
 
     &__cache-notice {
       margin-top: 12px;
-      background: #fef3e2;
-      color: #b45309;
-      border: 1px solid #f59e0b;
+      background: var(--col-review-bg);
+      color: var(--color-warning);
+      border: 1px solid rgba(251, 191, 36, 0.4);
       border-radius: var(--radius-md);
       padding: 10px 14px;
       font-size: 0.85rem;
@@ -255,7 +257,7 @@
 
   &--compare {
     p {
-      color: var(--color-text-secondary, #5f6368);
+      color: var(--color-text-muted);
       font-size: 0.9rem;
     }
 
@@ -355,7 +357,7 @@
 
   &__count {
     font-size: 0.8rem;
-    color: var(--color-text-secondary, #5f6368);
+    color: var(--color-text-muted);
     text-align: right;
   }
 }

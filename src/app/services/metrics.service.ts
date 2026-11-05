@@ -97,20 +97,19 @@ export class MetricsService {
       throw new Error('Usuário não autenticado.');
     }
 
-    // As regras exigem o filtro por createdBy em consultas de listagem.
+    // As regras de leitura verificam se o usuário é membro do projeto; não filtrar por createdBy,
+    // senão as métricas só veriam os cartões e eventos do próprio usuário.
     const [cardsSnapshot, eventsSnapshot] = await Promise.all([
       getDocs(
         query(
           collection(db, 'cards'),
           where('projectId', '==', projectId),
-          where('createdBy', '==', uid),
         ),
       ),
       getDocs(
         query(
           collection(db, 'cardEvents'),
           where('projectId', '==', projectId),
-          where('createdBy', '==', uid),
         ),
       ),
     ]);

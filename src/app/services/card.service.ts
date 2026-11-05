@@ -54,7 +54,11 @@ export class CardService {
       const unsubscribe = onSnapshot(
         cardsQuery,
         (snapshot) => subscriber.next(snapshot.docs.map((doc) => Card.fromFirestore(doc))),
-        (error) => subscriber.error(error),
+        (error) => {
+          // Um erro aqui (ex.: permission-denied) mata o listener e congela o quadro silenciosamente.
+          console.error('[CardService] listener de cards falhou:', error);
+          subscriber.error(error);
+        },
       );
 
       return () => unsubscribe();

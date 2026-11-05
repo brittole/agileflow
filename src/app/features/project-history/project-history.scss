@@ -29,8 +29,9 @@
   }
 
   &__error {
-    background: rgba(255, 107, 107, 0.15);
-    color: #ff6b6b;
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+    border: 1px solid rgba(255, 107, 107, 0.3);
     border-radius: var(--radius-md);
     padding: 10px 14px;
     font-size: 0.85rem;
@@ -59,29 +60,57 @@
     border-radius: var(--radius-lg);
     padding: 14px 18px;
     box-shadow: var(--shadow-sm);
+    transition: border-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--color-primary);
+    }
   }
 
   &__icon {
-    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
     flex-shrink: 0;
+    background: var(--color-surface-2);
+
+    &[data-type='created'] {
+      background: var(--col-done-bg);
+    }
+    &[data-type='deleted'] {
+      background: var(--color-danger-bg);
+    }
+    &[data-type='moved'] {
+      background: var(--col-progress-bg);
+    }
   }
 
   &__content {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     flex: 1;
     min-width: 0;
   }
 
   &__card {
-    font-size: 0.8rem;
-    color: var(--color-text-muted);
-    font-family: monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-text);
   }
 
   &__description {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+
+    strong {
+      color: var(--color-text);
+      margin-right: 4px;
+    }
   }
 
   &__date {
