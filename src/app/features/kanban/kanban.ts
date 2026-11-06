@@ -4,11 +4,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { CARD_STORY_POINTS, CardStatus, CardStoryPoints } from '../../interfaces/card.interface';
+import { ICardEvent } from '../../interfaces/card-event.interface';
 import { Card } from '../../models/card.model';
 import { Project } from '../../models/project.model';
 import { AuthService } from '../../services/auth.service';
 import { CardService } from '../../services/card.service';
 import { ProjectService } from '../../services/project.service';
+import { getCardOverdueLabel, getCardOverdueState, CardOverdueState } from '../../utils/card-overdue.util';
 import { CardDetail } from '../card-detail/card-detail';
 
 interface IKanbanColumn {
@@ -39,6 +41,7 @@ export class Kanban implements OnInit, OnDestroy {
   private routeSubscription?: Subscription;
   private projectSubscription?: Subscription;
   private cardsSubscription?: Subscription;
+  private eventsSubscription?: Subscription;
   private draggedCardId: string | null = null;
 
   private projectId: string | null = null;
@@ -48,6 +51,7 @@ export class Kanban implements OnInit, OnDestroy {
 
   readonly project = signal<Project | null>(null);
   readonly cards = signal<Card[]>([]);
+  readonly cardEvents = signal<ICardEvent[]>([]);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
 
@@ -62,6 +66,25 @@ export class Kanban implements OnInit, OnDestroy {
     const uid = this.authService.getCurrentUser()?.uid;
     return current !== null && current.ownerId === uid;
   });
+
+  // Mapa de uid → nome do responsável para exibir nos cards.
+  readonly memberNames = computed(() => {
+    const current = this.project();
+    const map = new Map<string, string>();
+    if (current) {
+      for (const [uid, info] of Object.entries(current.memberInfo ?? {})) {
+        map.set(uid, info.nome);
+      }
+    }
+    return map;
+  });
+
+  assigneeName(assigneeId: string | null | undefined): string | null {
+    if (!assigneeId) {
+      return null;
+    }
+    return this.memberNames().get(assigneeId) ?? assigneeId;
+  }
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
@@ -106,10 +129,12 @@ export class Kanban implements OnInit, OnDestroy {
   private loadProject(projectId: string | null): void {
     this.projectSubscription?.unsubscribe();
     this.cardsSubscription?.unsubscribe();
+    this.eventsSubscription?.unsubscribe();
 
     this.projectId = projectId;
     this.project.set(null);
     this.cards.set([]);
+    this.cardEvents.set([]);
     this.errorMessage.set(null);
     this.isLoading.set(true);
 
@@ -138,12 +163,27 @@ export class Kanban implements OnInit, OnDestroy {
       next: (cards) => this.cards.set(cards),
       error: () => this.errorMessage.set('Não foi possível carregar os cards.'),
     });
+
+    // Eventos do projeto para calcular lead time / atraso dos cards.
+    this.eventsSubscription = this.cardService.watchProjectEvents$(projectId).subscribe({
+      next: (events) => this.cardEvents.set(events),
+      error: () => {},
+    });
   }
 
   ngOnDestroy(): void {
     this.routeSubscription?.unsubscribe();
     this.projectSubscription?.unsubscribe();
     this.cardsSubscription?.unsubscribe();
+    this.eventsSubscription?.unsubscribe();
+  }
+
+  cardOverdueState(card: Card): CardOverdueState {
+    return getCardOverdueState(card, this.cardEvents());
+  }
+
+  cardOverdueLabel(card: Card): string | null {
+    return getCardOverdueLabel(this.cardOverdueState(card));
   }
 
   cardsForStatus(status: CardStatus): Card[] {

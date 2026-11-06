@@ -148,7 +148,7 @@ export class CardService {
 
   async updateCard(
     cardId: string,
-    data: { title: string; description: string; storyPoints: CardStoryPoints },
+    data: { title: string; description: string; storyPoints: CardStoryPoints; assigneeId?: string | null },
   ): Promise<void> {
     const cardRef = doc(db, this.collectionName, cardId);
     const current = await getDoc(cardRef);
@@ -159,10 +159,18 @@ export class CardService {
 
     await this.requireProjectOwner(current.data()['projectId']);
 
-    await updateDoc(cardRef, {
-      ...data,
-      updatedAt: serverTimestamp()
-    });
+    // assigneeId deve ser string ou null — nunca undefined (o Firestore rejeita).
+    const payload: Record<string, unknown> = {
+      title: data.title,
+      description: data.description,
+      storyPoints: data.storyPoints,
+      updatedAt: serverTimestamp(),
+    };
+    if (data.assigneeId !== undefined) {
+      payload['assigneeId'] = data.assigneeId ?? null;
+    }
+
+    await updateDoc(cardRef, payload);
   }
 
   async deleteCard(cardId: string): Promise<void> {
@@ -322,6 +330,31 @@ export class CardService {
     );
 
     return snapshot.docs.map((doc) => CardEvent.fromFirestore(doc));
+  }
+
+  // Versão reativa (onSnapshot) para telas que precisam recalcular em tempo real.
+  watchProjectEvents$(projectId: string): Observable<CardEvent[]> {
+    return this.authService.getUidWhenReady$().pipe(
+      switchMap((uid) => (uid ? this.watchEventsByProject$(projectId) : of([] as CardEvent[]))),
+    );
+  }
+
+  private watchEventsByProject$(projectId: string): Observable<CardEvent[]> {
+    return new Observable<CardEvent[]>((subscriber) => {
+      const eventsQuery = query(
+        collection(db, this.eventsCollectionName),
+        where('projectId', '==', projectId),
+        orderBy('createdAt', 'desc'),
+      );
+
+      const unsubscribe = onSnapshot(
+        eventsQuery,
+        (snapshot) => subscriber.next(snapshot.docs.map((doc) => CardEvent.fromFirestore(doc))),
+        (error) => subscriber.error(error),
+      );
+
+      return () => unsubscribe();
+    });
   }
 
   getAllCardsForCurrentUser$(): Observable<Card[]> {

@@ -86,7 +86,7 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.keys().hasOnly([
                          'projectId', 'title', 'description', 'storyPoints', 'status',
-                         'createdBy', 'createdAt', 'updatedAt'
+                         'createdBy', 'createdAt', 'updatedAt', 'assigneeId'
                        ])
                     && request.resource.data.keys().hasAll([
                          'projectId', 'title', 'description', 'storyPoints', 'status',
@@ -110,7 +110,7 @@ service cloud.firestore {
                     && request.resource.data.projectId == resource.data.projectId
                     && request.resource.data.createdBy == resource.data.createdBy
                     && request.resource.data.diff(resource.data).affectedKeys()
-                         .hasOnly(['title', 'description', 'storyPoints', 'status', 'completedAt', 'updatedAt', 'lastEventId'])
+                         .hasOnly(['title', 'description', 'storyPoints', 'status', 'completedAt', 'updatedAt', 'lastEventId', 'assigneeId'])
                     && request.resource.data.updatedAt == request.time
                     && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['lastEventId'])
                         || request.resource.data.diff(resource.data).affectedKeys().hasAny(['status']))
@@ -132,7 +132,11 @@ service cloud.firestore {
                         || validStatus(request.resource.data.status))
                     && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['completedAt'])
                         || request.resource.data.completedAt == null
-                        || request.resource.data.completedAt == request.time);
+                        || request.resource.data.completedAt == request.time)
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['assigneeId'])
+                        || (isProjectMember(get(projectPath(resource.data.projectId)).data)
+                            && (request.resource.data.assigneeId == null
+                                || request.resource.data.assigneeId is string)));
 
       allow delete: if request.auth != null
                     && isProjectOwner(get(projectPath(resource.data.projectId)).data);

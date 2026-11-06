@@ -144,8 +144,14 @@ export class ProjectTeam implements OnInit, OnDestroy {
 
       // O perfil público (userEmails) só tem o uid; o nome vem do perfil users/{uid},
       // que o admin não pode ler de outro usuário. Por isso gravamos memberInfo no projeto.
-      const profile = await this.userService.getUserProfile(found.uid);
-      const nome = profile?.nome ?? email;
+      // Se a leitura do perfil falhar (regras), usamos o e-mail como nome temporário.
+      let nome = email;
+      try {
+        const profile = await this.userService.getUserProfile(found.uid);
+        nome = profile?.nome ?? email;
+      } catch {
+        // Admin não pode ler users/{uid} de outro usuário; usa o e-mail como nome.
+      }
 
       await this.projectService.addMember(project.id, found.uid, { nome, email });
       this.form.reset();

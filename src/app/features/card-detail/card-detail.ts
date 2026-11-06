@@ -28,11 +28,13 @@ export class CardDetail implements OnInit {
   readonly errorMessage = signal<string | null>(null);
 
   readonly isOwner = signal(false);
+  readonly members = signal<{ uid: string; nome: string; email: string }[]>([]);
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required]],
     description: [''],
     storyPoints: this.fb.nonNullable.control<number | null>(null, Validators.required),
+    assigneeId: this.fb.nonNullable.control<string | null>(null),
   });
 
   get title() {
@@ -47,6 +49,10 @@ export class CardDetail implements OnInit {
     return this.form.controls.storyPoints;
   }
 
+  get assigneeId() {
+    return this.form.controls.assigneeId;
+  }
+
   ngOnInit(): void {
     const current = this.card();
 
@@ -54,9 +60,11 @@ export class CardDetail implements OnInit {
       title: current.title,
       description: current.description,
       storyPoints: current.storyPoints,
+      assigneeId: current.assigneeId ?? null,
     });
 
     this.checkOwnership(current.projectId);
+    this.loadMembers(current.projectId);
   }
 
   private async checkOwnership(projectId: string): Promise<void> {
@@ -68,6 +76,22 @@ export class CardDetail implements OnInit {
 
     const projectDoc = await this.projectService.getProjectById(projectId);
     this.isOwner.set(projectDoc?.ownerId === uid);
+  }
+
+  private async loadMembers(projectId: string): Promise<void> {
+    const projectDoc = await this.projectService.getProjectById(projectId);
+    if (!projectDoc) {
+      return;
+    }
+
+    const list: { uid: string; nome: string; email: string }[] = [];
+    for (const uid of projectDoc.memberIds) {
+      const info = projectDoc.memberInfo?.[uid];
+      if (info) {
+        list.push({ uid, nome: info.nome, email: info.email });
+      }
+    }
+    this.members.set(list);
   }
 
   close(): void {
@@ -83,13 +107,14 @@ export class CardDetail implements OnInit {
     this.errorMessage.set(null);
     this.isSaving.set(true);
 
-    const { title, description, storyPoints } = this.form.getRawValue();
+    const { title, description, storyPoints, assigneeId } = this.form.getRawValue();
 
     try {
       await this.cardService.updateCard(this.card().id, {
         title,
         description,
         storyPoints: storyPoints as CardStoryPoints,
+        assigneeId: assigneeId || null,
       });
       this.closed.emit();
     } catch (error) {

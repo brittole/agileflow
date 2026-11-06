@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { IProjectMetrics } from '../../interfaces/project-metrics.interface';
 import { AiService } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
+import { CardService } from '../../services/card.service';
 import { MetricsService } from '../../services/metrics.service';
 import { ProjectService } from '../../services/project.service';
 import { ProjectPerformance } from './project-performance';
@@ -57,6 +58,13 @@ describe('ProjectPerformance', () => {
     const authService = jasmine.createSpyObj<AuthService>('AuthService', ['getUidWhenReady$']);
     authService.getUidWhenReady$.and.returnValue(of('user-1'));
 
+    const cardService = jasmine.createSpyObj<CardService>('CardService', [
+      'getCardsByProject$',
+      'getProjectEvents',
+    ]);
+    cardService.getCardsByProject$.and.returnValue(of([]));
+    cardService.getProjectEvents.and.resolveTo([]);
+
     await TestBed.configureTestingModule({
       imports: [ProjectPerformance],
       providers: [
@@ -65,6 +73,7 @@ describe('ProjectPerformance', () => {
         { provide: AiService, useValue: aiService },
         { provide: ProjectService, useValue: projectService },
         { provide: AuthService, useValue: authService },
+        { provide: CardService, useValue: cardService },
         {
           provide: ActivatedRoute,
           useValue: { paramMap: of({ get: () => 'project-1' }) },

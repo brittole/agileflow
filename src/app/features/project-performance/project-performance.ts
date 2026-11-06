@@ -3,11 +3,14 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, firstValueFrom } from 'rxjs';
 
 import { IProjectMetrics } from '../../interfaces/project-metrics.interface';
+import { Card } from '../../models/card.model';
 import { Project } from '../../models/project.model';
 import { AiService, IAiComparison, IAiDiagnosis } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
+import { CardService } from '../../services/card.service';
 import { MetricsService } from '../../services/metrics.service';
 import { ProjectService } from '../../services/project.service';
+import { getCardOverdueState } from '../../utils/card-overdue.util';
 
 const PERIOD_DAYS = 7;
 
@@ -23,12 +26,15 @@ export class ProjectPerformance implements OnInit, OnDestroy {
   private readonly metricsService = inject(MetricsService);
   private readonly aiService = inject(AiService);
   private readonly authService = inject(AuthService);
+  private readonly cardService = inject(CardService);
 
   private routeSubscription?: Subscription;
   private projectSubscription?: Subscription;
 
   readonly project = signal<Project | null>(null);
   readonly metrics = signal<IProjectMetrics | null>(null);
+  readonly overdueCards = signal<Card[]>([]);
+  readonly warningCards = signal<Card[]>([]);
   readonly isLoading = signal(true);
   readonly errorMessage = signal<string | null>(null);
   readonly projectId = signal<string | null>(null);
@@ -114,11 +120,34 @@ export class ProjectPerformance implements OnInit, OnDestroy {
 
     try {
       this.metrics.set(await this.metricsService.getProjectMetrics(projectId, PERIOD_DAYS));
+      await this.loadOverdueCards(projectId);
     } catch {
       this.errorMessage.set('Não foi possível carregar as métricas do projeto.');
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private async loadOverdueCards(projectId: string): Promise<void> {
+    const [cards, events] = await Promise.all([
+      firstValueFrom(this.cardService.getCardsByProject$(projectId)),
+      this.cardService.getProjectEvents(projectId),
+    ]);
+
+    const overdue: Card[] = [];
+    const warning: Card[] = [];
+
+    for (const card of cards) {
+      const state = getCardOverdueState(card, events);
+      if (state === 'overdue') {
+        overdue.push(card);
+      } else if (state === 'warning') {
+        warning.push(card);
+      }
+    }
+
+    this.overdueCards.set(overdue);
+    this.warningCards.set(warning);
   }
 
   formatCycleTime(days: number): string {

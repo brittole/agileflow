@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { Subscription, combineLatest, of } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { catchError, switchMap } from 'rxjs/operators';
 
 import { Card } from '../../models/card.model';
 import { Project } from '../../models/project.model';
@@ -44,7 +44,12 @@ export class Dashboard implements OnInit, OnDestroy {
           return of([] as Card[]);
         }
 
-        const cardQueries = projects.map((p) => this.cardService.getCardsByProject$(p.id));
+        // Cada projeto que falhar contribui com lista vazia, sem derrubar o dashboard.
+        const cardQueries = projects.map((p) =>
+          this.cardService.getCardsByProject$(p.id).pipe(
+            catchError(() => of([] as Card[])),
+          ),
+        );
         return combineLatest(cardQueries);
       }),
     ).subscribe({

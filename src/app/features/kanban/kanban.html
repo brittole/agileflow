@@ -103,6 +103,8 @@
             <article
               class="card-item"
               [class.card-item--readonly]="!isOwner() && column.status === 'done'"
+              [class.card-item--warning]="cardOverdueState(card) === 'warning'"
+              [class.card-item--overdue]="cardOverdueState(card) === 'overdue'"
               [attr.draggable]="isOwner() || column.status !== 'done' ? 'true' : 'false'"
               (dragstart)="onDragStart($event, card)"
               (click)="openCard(card)"
@@ -112,6 +114,16 @@
                 <p>{{ card.description }}</p>
               }
               <div class="card-item__footer">
+                @if (cardOverdueLabel(card); as overdueLabel) {
+                  <span class="card-item__overdue" [class.card-item__overdue--warning]="cardOverdueState(card) === 'warning'">
+                    {{ overdueLabel }}
+                  </span>
+                }
+                @if (card.assigneeId; as assigneeId) {
+                  <span class="card-item__assignee" [title]="'Responsável: ' + (assigneeName(assigneeId) ?? assigneeId)">
+                    👤 {{ assigneeName(assigneeId) }}
+                  </span>
+                }
                 <span class="card-item__points">{{ card.storyPoints }} pts</span>
               </div>
             </article>

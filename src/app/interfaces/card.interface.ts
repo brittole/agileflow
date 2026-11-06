@@ -19,6 +19,8 @@ export interface ICard {
   completedAt?: Timestamp | null;
   // Id do evento "moved" gravado no mesmo batch da última mudança de status; ausente em cartões antigos.
   lastEventId?: string | null;
+  // Uid do membro responsável pelo card; null = sem responsável. Só o gestor atribui.
+  assigneeId?: string | null;
 }
 
 export interface ICreateCard {

@@ -62,6 +62,7 @@ describe('Kanban - drag and drop (atualização da UI)', () => {
           useValue: {
             getCardsByProject$: () => cardsSubject.asObservable(),
             updateCardStatus: updateCardStatusSpy,
+            watchProjectEvents$: () => of([]),
           },
         },
       ],

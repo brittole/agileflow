@@ -48,6 +48,19 @@
         }
       </div>
 
+      <div class="form-field">
+        <label for="detail-assignee">Responsável</label>
+        <select id="detail-assignee" formControlName="assigneeId" [disabled]="!isOwner()">
+          <option [ngValue]="null">Ninguém</option>
+          @for (member of members(); track member.uid) {
+            <option [ngValue]="member.uid">{{ member.nome }} ({{ member.email }})</option>
+          }
+        </select>
+        @if (!isOwner()) {
+          <span class="form-field__hint">Apenas o administrador pode atribuir responsável.</span>
+        }
+      </div>
+
       <div class="modal__actions">
         @if (isOwner()) {
           <button

@@ -52,6 +52,38 @@
       </article>
     </div>
 
+    @if (overdueCards().length > 0 || warningCards().length > 0) {
+      <section class="panel panel--overdue">
+        <h2>⚠️ Cartões com prazo</h2>
+        @if (overdueCards().length > 0) {
+          <div class="overdue-list">
+            <h3>Atrasados ({{ overdueCards().length }})</h3>
+            <ul>
+              @for (card of overdueCards(); track card.id) {
+                <li class="overdue-list__item overdue-list__item--overdue">
+                  <strong>{{ card.title }}</strong>
+                  <span>{{ card.storyPoints }} pts — lead time maior que o limite</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @if (warningCards().length > 0) {
+          <div class="overdue-list">
+            <h3>Podem atrasar ({{ warningCards().length }})</h3>
+            <ul>
+              @for (card of warningCards(); track card.id) {
+                <li class="overdue-list__item overdue-list__item--warning">
+                  <strong>{{ card.title }}</strong>
+                  <span>{{ card.storyPoints }} pts — último dia do prazo, ainda não está em Revisão</span>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </section>
+    }
+
     <div class="performance__panels">
       <section class="panel">
         <h2>Distribuição por status</h2>
