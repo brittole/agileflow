@@ -59,7 +59,7 @@ export class AiService {
     const token = await this.authService.getIdToken();
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 35000);
+    const timeout = setTimeout(() => controller.abort(), 90000);
 
     try {
       const response = await fetch(`${environment.aiWorkerUrl}/analyze`, {
@@ -111,7 +111,7 @@ export class AiService {
     const token = await this.authService.getIdToken();
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 35000);
+    const timeout = setTimeout(() => controller.abort(), 90000);
 
     try {
       const response = await fetch(`${environment.aiWorkerUrl}/compare`, {

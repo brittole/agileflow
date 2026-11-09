@@ -38,11 +38,11 @@ export class GeminiError extends Error {
   }
 }
 
-async function callGemini(prompt: string, env: Env): Promise<string> {
+async function callGeminiOnce(prompt: string, env: Env): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.GEMINI_MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  const timeout = setTimeout(() => controller.abort(), 60000);
 
   try {
     const response = await fetch(url, {
@@ -68,6 +68,12 @@ async function callGemini(prompt: string, env: Env): Promise<string> {
     if (!response.ok) {
       const errorBody = await response.text().catch(() => 'sem corpo');
       console.error(`[Gemini] HTTP ${response.status}: ${errorBody.slice(0, 500)}`);
+
+      // 503/500 são falhas transitórias do provedor (alta demanda) — sinaliza para retry.
+      if (response.status === 503 || response.status === 500) {
+        throw new GeminiError('RETRYABLE', 503);
+      }
+
       throw new GeminiError('Erro ao consultar a IA.', 502);
     }
 
@@ -91,6 +97,28 @@ async function callGemini(prompt: string, env: Env): Promise<string> {
     }
 
     throw new GeminiError('Erro ao consultar a IA.', 502);
+  }
+}
+
+// Chama o Gemini com 1 retry automático quando a falha é transitória (503/500).
+async function callGemini(prompt: string, env: Env): Promise<string> {
+  try {
+    return await callGeminiOnce(prompt, env);
+  } catch (error) {
+    if (error instanceof GeminiError && error.message === 'RETRYABLE') {
+      console.error('[Gemini] falha transitória (503/500), tentando novamente em 2s...');
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      try {
+        return await callGeminiOnce(prompt, env);
+      } catch (retryError) {
+        // Se o retry também falha por falha transitória, devolve erro amigável ao usuário.
+        if (retryError instanceof GeminiError && retryError.message === 'RETRYABLE') {
+          throw new GeminiError('A IA está temporariamente indisponível. Tente novamente em instantes.', 502);
+        }
+        throw retryError;
+      }
+    }
+    throw error;
   }
 }
 
